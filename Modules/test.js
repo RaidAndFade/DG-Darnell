@@ -43,6 +43,7 @@ test.commands = {
 		}
 	},
 	test: {
+		aliases: [],
 		allowed: ()=>{return true;},
 		usage: "test <return text>",
 		parse: utils.combinate.all,
@@ -52,7 +53,9 @@ test.commands = {
 		}
 	},
 	permissiontest: {
+		aliases: [],
 		allowed: (p, user, args, event)=>{
+			console.log("Checking "+user.username+" if allowed to use PERMISSIONTEST");
 			console.log("~PERMISSIONTEST BEGINS~");
 			setTimeout(p.reply.bind(this,event,"You are "+(user.id==p.owner?"":"not ")+"the owner of this bot..."),0);
 			setTimeout(p.reply.bind(this,event,"You are "+(user.id==p.bot.servers[p.bot.channels[event.channel_id].guild_id].owner_id?"":"not ")+"the owner of this server..."),2000);
