@@ -17,6 +17,7 @@ base.commands={
 		aliases:["?"],
 		usage:"help (mod) <page>",
 		allowed: (p,user,args,event) => {
+			console.log("Checking "+user.username+" if allowed to use HELP");
 			return true;
 		},
 		desc:"Shows help page for all commands.",  
@@ -68,7 +69,8 @@ base.commands={
 	mod:{
 		usage:"mod help",
 		allowed: (p,user,args,event)=>{
-			return (typeof p.bot.serverInfoFromChannel(event.channel_id)=="undefined")?user.id == p.owner:(user.id==p.bot.serverInfoFromChannel(event.channel_id).owner_id || user.id == p.owner);
+			console.log("Checking "+user.username+" if allowed to use MOD");
+			return (typeof p.bot.servers[event.guild_id]=="undefined")?user.id == p.owner:(user.id==p.bot.servers[event.guild_id].owner_id || user.id == p.owner);
 		},
 		aliases: ["mods"],
 		parse: utils.combinator.seq(utils.combinate.phrase.or(utils.combinator.of("help")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of(""))),
@@ -162,7 +164,8 @@ base.commands={
 	settings:{
 		usage:"settings help",
 		allowed: (p,user,args,event)=>{
-			return (typeof p.bot.serverInfoFromChannel(event.channel_id)=="undefined")?user.id == p.owner:(user.id==p.bot.serverInfoFromChannel(event.channel_id).owner_id || user.id == p.owner);
+			console.log("Checking "+user.username+" if allowed to use SETTINGS");
+			return (typeof p.bot.servers[event.guild_id]=="undefined")?user.id == p.owner:(user.id==p.bot.servers[event.guild_id].owner_id || user.id == p.owner);
 		},
 		aliases: ["botsettings"],
 		parse: utils.combinator.seq(utils.combinate.phrase.or(utils.combinator.of("help")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of("")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.all.or(utils.combinator.of(""))),
@@ -254,14 +257,54 @@ base.commands={
 	invitelink: {
 		usage:"invitelink",
 		allowed: (p,user,args,event)=>{
-			return (typeof p.bot.serverInfoFromChannel(event.channel_id)=="undefined")?user.id == p.owner:(user.id==p.bot.serverInfoFromChannel(event.channel_id).owner_id || user.id == p.owner);
+			console.log("Checking "+user.username+" if allowed to use INVITELINK");
+			return true;
 		},
 		aliases: ["oauth","oauthlink"],
 		desc:"Get the bot's invite link.",
 		run:(utils,args,user,channel,event)=>{
 			utils.reply(event,"The URL to invite me is "+utils.bot.inviteURL);
 		}
-	}//TODO : crap
+	},
+	restart: {
+		usage:"",
+		allowed: (p,user,args,event)=>{
+			return user.id == p.owner;
+		},
+		aliases: [],
+		desc: "Restart the bot",
+		run: (p,args,user,channel,event) => {
+			p.reply(event,":wave:");
+			p.restart();
+		}
+	},
+	botinfo: {
+		usage:"",
+		allowed: (p,user,args,event)=>{
+			return user.id == p.owner;
+		},
+		aliases: [],
+		desc: "Get some info about the bot",
+		run: (p,args,user,channel,event) => {
+			p.reply(event,"In "+Object.keys(p.bot.channels).length+" channels on "+Object.keys(p.bot.servers).length+" servers with "+Object.keys(p.bot.users).length+" users");
+		}
+	},
+	setstatus: {
+		usage:"",
+		allowed: (p,user,args,event)=>{
+			return user.id == p.owner;
+		},
+		aliases: [],
+		desc: "Set the bot's status",
+		run: (p,args,user,channel,event) => {
+			p.bot.setPresence({
+				game:{
+					name:args.join(" ")
+				}
+			});
+			p.reply(event,"Bot status set to `"+args.join(" ")+"`");
+		}
+	}
 }
 
 module.exports=base;
