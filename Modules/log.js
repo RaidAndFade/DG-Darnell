@@ -47,7 +47,7 @@ log.on("message_deleted",(p,msgId,channelId,event)=>{
 
 log.commands = {
 	stats: {
-		parse: utils.combinator.seq(utils.combinate.word.or(utils.combinate.user.or(utils.combinator.of("help"))),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.user.or(utils.combinator.of("C"))),	
+		parse: utils.combinator.seq(utils.combinate.word.or(utils.combinate.user.or(utils.combinator.of("help"))),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.user.or(utils.combinator.of(""))),	
 		allowed: (p,user,args,event) => {
 			console.log(user);
 			return p.owner==user.id;
@@ -56,7 +56,7 @@ log.commands = {
 		usage: "stats",
 		desc: "Show user/channel specific statistics",
 		run: (p, args, user, channel, event) => {
-			subcom = args[0];
+			subcom = args[0].toLowerCase();
 			args.shift();
 			chan=event.channel_id;
 			switch(subcom){
@@ -69,20 +69,20 @@ log.commands = {
 				case "deleted":
 					if(args.length<2||args[1]==""){
 						id=event.author.id;
-						p.mysql.query("SELECT * FROM `log` WHERE `userId`=? AND `channelId`=? AND `flags`%2=1 ORDER BY `date` DESC LIMIT 5;",[id,chan],function(err,res,fs){
+						p.mysql.query("SELECT * FROM `log` WHERE `channelId`=? AND `flags`%2=1 ORDER BY `date` DESC LIMIT 5;",[chan],function(err,res,fs){
 							out="";
 							count=1;
 							for(var row of res){
 								out+="```\n"+(count++)+".\n"+row.origmsg.replace(/`/g,'\'')+"\n```\n";
 							}
 							if(count==1)
-								p.reply(event,"**Somehow... that user has no deleted messages!**");
+								p.reply(event,"**Somehow... this channel has no deleted messages!**");
 							else
 								p.reply(event,out+"");
 						});
 					}else{
 						p.bot.getMember({serverID:p.bot.channels[chan].guild_id,userID:args[1].replace("<@","").replace(">","")},function(err,res){
-							if(err){id=event.author.id;}else{id=res.user.id;}
+							if(err){id=event.author.id;}else{id=res.user.id;}//if user doesn't exist return generic.
 							p.mysql.query("SELECT * FROM `log` WHERE `userId`=? AND `channelId`=? AND `flags`%2=1 ORDER BY `date` DESC LIMIT 5;",[id,chan],function(err,res,fs){
 								out="";
 								count=1;
@@ -100,14 +100,14 @@ log.commands = {
 					break;
 				case "edits":
 				case "edit":
+				case "edited":
 				case "changes":
 					if(args.length<2||args[1]==""){
-						id=event.author.id;
-						p.mysql.query("SELECT * FROM `log` WHERE `userId`=? AND `channelId`=? AND `flags`%2>1 ORDER BY `date` DESC LIMIT 3;",[id,chan],function(err,res,fs){
+						p.mysql.query("SELECT * FROM `log` WHERE `channelId`=? AND `flags`>1 ORDER BY `date` DESC LIMIT 3;",[chan],function(err,res,fs){
 							out="";
 							count=1;
 							for(var row of res){
-								edits=JSON.parse(res.editmsg);
+								edits=JSON.parse(row.editmsg);
 								overflowed=row.origmsg.length>100;
 								out+="\n**"+(count++)+":** *"+row.messageId+"*\n`"+row.origmsg.substr(0,100).replace(/`/g,'\'')+(overflowed?"...":"")+"\n`";
 								edits=[edits[edits.length-1]];//edits=edits.length>2?[edits[0],edits[edits.length-1]]:edits;
@@ -118,18 +118,17 @@ log.commands = {
 								}
 							}
 							if(count==1)
-								p.reply(event,"**Somehow... that user has no edited messages!**");
+								p.reply(event,"**Somehow... this channel has no edited messages!**");
 							else
 								p.reply(event,out+"");
 						});
 					}else{
-						p.bot.getMember({serverID:p.bot.serverFromChannel(chan),userID:args[1].replace("<@","").replace(">","")},function(err,res){
-							if(err){id=event.author.id;}else{id=res.user.id;}
+						p.bot.getMember({serverID:p.bot.channels[chan].guild_id,userID:args[1].replace("<@","").replace(">","")},function(err,res){
+							if(err){id=event.author.id;}else{id=res.user.id;}//if user doesn't exist return generic.
 							p.mysql.query("SELECT * FROM `log` WHERE `userId`=? AND `channelId`=? AND `flags`>1 ORDER BY `date` DESC LIMIT 3;",[id,chan],function(err,res,fs){
 								out="";
 								count=1;
 								for(var row of res){
-									p.sendMSG(event,row.editmsg);
 									edits=JSON.parse(row.editmsg);
 									overflowed=row.origmsg.length>100;
 									out+="\n**"+(count++)+":** *"+row.messageId+"*\n`"+row.origmsg.substr(0,100).replace(/`/g,'\'')+(overflowed?"...":"")+"`\n";
@@ -148,19 +147,45 @@ log.commands = {
 						});
 					}
 					break;
+				default:
+					//do user stuff here, if user is valid, otherwise don't break so that help msg is sent.
 				case "help":
 					p.reply(event,"**Subcommands**:\n```\n"
-								+"\n/stats @user : Returns simple data about a user"
-								+"\n/stats word <@user> : Returns the most used word <that @user has sent>"
-								+"\n/stats deleted <@user> : Returns the most recent deleted msg <that @user has sent>"
-								+"\n/stats edits <@user> : Returns the 5 most recent edits <that @user has done>"
+								+"\nstats @user           : Returns simple data about a user"
+								+"\nstats word <@user>    : Returns the most used word <that @user has sent>"
+								+"\nstats deleted <@user> : Returns the most recent deleted msg <that @user has sent>"
+								+"\nstats edits <@user>   : Returns the 5 most recent edits <that @user has done>"
 								+"```");
 					break;
-				default:
-					p.reply(event,user.tag+", Sorry mate im too lazy to finish this command :lirikFEELS:");
 			}
 		}
-	},//make a log command, to view certain messages.
+	},
+	log: {
+		parse: utils.combinator.seq(utils.combinate.word.or(utils.combinate.user.or(utils.combinator.of("help"))),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinate.digits.or(utils.combinator.of("")))),	
+		allowed: (p,user,args,event) => {
+			console.log(user);
+			return p.owner==user.id;
+		},
+		aliases: [],
+		usage: "log",
+		desc: "Show message specific statistics",
+		run: (p, args, user, channel, event) => {
+			subcom = args[0].toLowerCase();
+			args.shift();
+			args.shift();
+			chan=event.channel_id;
+			switch(subcom){
+				default:
+				case "help":
+					p.reply(event,"**Subcommands**:\n```\n"
+								+"\nlog search \"text\" : Search for "
+								+"\nlog deleted <@user> : Returns the most recent deleted msg <that @user has sent>"
+								+"\nlog edits <@user> : Returns the 5 most recent edits <that @user has done>"
+								+"```");
+					break;
+			}			
+		}
+	}//make a log command, to view certain messages.
 }
 
 module.exports=log;
