@@ -1,6 +1,6 @@
 
-const DiscordClient = require('./discord.io.js');
-const bot = require("./UserPass.js").bot;//Dont open this file while streaming you dumbo.
+const DiscordClient = require('discord.io');
+const bot = require("./UserPass.js").bot;
 const Twitter = require("./UserPass.js").twitter;
 const mysql = require("./UserPass.js").mysql;
 const cons = require("./UserPass.js").connections;
@@ -12,7 +12,6 @@ const request = require('request');
 const querystring = require('querystring');
 const fp = require('path');
 const reload = require('require-reload')(require);
-selfID = "120308435639074816";
 data={persistent:{errors:[],delQueue:{},modData:{}},ownMsgs:[],commandReplies:{}};
 chanData={};
 chanData.def={ModBlacklist:[],blockedUsers:[],settings:{comInit:"!",enabled:true,autoDelete:true}};
@@ -239,7 +238,7 @@ bot.on('message', function(unusable, unusable2, channelId, message, rawEvent) {
 	if(!utils.chanData[channelId].settings.enabled)return;
 	user = rawEvent.d.author;
 	user.tag="<@"+user.id+">";
-	rawEvent.d.guild_id=bot.channels[channelId].guild_id;
+	try{rawEvent.d.guild_id=bot.channels[channelId].guild_id;}catch(e){}
 	for(modf in Modules){
 		if(utils.chanData[channelId].ModBlacklist.indexOf(modf)!=-1)continue;
 		try{Modules[modf].emit("message",utils,user,channelId,message,rawEvent.d);}catch(e){}
@@ -255,7 +254,7 @@ bot.on('message', function(unusable, unusable2, channelId, message, rawEvent) {
 			if(!Modules[modf].commands)continue;
 			coms = Modules[modf].commands;
 			for(comk in coms){
-				run=(comk==comd);
+				var run=(comk==comd);
 				for(aliask in coms[comk].aliases){
 					alias=coms[comk].aliases[aliask];
 					if(!run){if(comd==alias)run=true;}else break;
@@ -288,7 +287,7 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 	try{
 	if(!utils.chanData[channelId].settings.enabled)return;
 	try{user.tag="<@"+user.id+">"}catch(e){};
-	rawEvent.guild_id=bot.channels[channelId].guild_id;
+	try{rawEvent.d.guild_id=bot.channels[channelId].guild_id;}catch(e){}
 	for(modf in Modules){
 		if(utils.chanData[channelId].ModBlacklist.indexOf(modf)!=-1)continue;
 		try{Modules[modf].emit("message_updated",utils,messageId,user,channelId,message,rawEvent);}catch(e){console.log(e);}
@@ -311,20 +310,26 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 				run=(comk==comd);
 				for(aliask in coms[comk].aliases){
 					alias=coms[comk].aliases[aliask];
-					if(!run){if(comd==alias)run=true;}else break;
+					if(!run){if(comd===alias)run=true;}else break;
 				}
 				console.log(run+" : "+comd+"/"+comk);
-				if(run){
-					if("allowed" in coms[comk]){
-						if(coms[comk].allowed(utils,user,args,rawEvent)==false){
-							utils.reply(rawEvent,"You don't have permission to use that command!");
-							return;
-						}
-					}
+				if(run==true){
 					if(coms[comk].parse){
 						if(coms[comk].parse.parse(args.join(" ")).status==false){console.log([args,args.join(" "),coms[comk].parse.parse(args.join(" "))]);return;}
+						if("allowed" in coms[comk]){
+							if(coms[comk].allowed(utils,user,coms[comk].parse.parse(args.join(" ")).value,rawEvent)==false){
+								utils.reply(rawEvent,"You don't have permission to use that command!");
+								return;
+							}
+						}
 						coms[comk].run(utils,coms[comk].parse.parse(args.join(" ")).value,user,channelId,rawEvent);
 					}else{
+						if("allowed" in coms[comk]){
+							if(coms[comk].allowed(utils,user,args,rawEvent)==false){
+								utils.reply(rawEvent,"You don't have permission to use that command!");
+								return;
+							}
+						}
 						coms[comk].run(utils,args,user,channelId,rawEvent);
 					}
 				}
@@ -353,8 +358,12 @@ bot.on('messageDelete', function(rawEvent){
 	if(rawEvent.d.id in data.persistent.delQueue)delete data.persistent.delQueue[rawEvent.d.id];
 });
 bot.on('disconnect', function(errMsg, code) {
+		console.log(errMsg);
+		console.log(code);
 	if(code==1001){
 		Crestart();
+	}else if(code==1006){
+		setTimeout(Crestart,3000);
 	}else{
 		console.log(errMsg);
 		console.log(code);
@@ -427,14 +436,31 @@ function stop(){
 	}
 	save();
 	mysql.end();
+	var id = setTimeout(function() {}, 0);
+	while (id--) {
+		clearTimeout(id);
+	}
 	try{bot.disconnect();}catch(e){}
 	process.exit();
 }
 function Crestart(){
 	save();
+	var id = setTimeout(function() {}, 0);
+	while (id--) {
+		clearTimeout(id);
+	}
 	try{bot.disconnect();}catch(e){}
 	start();
 }
+utils.restart=()=>{
+	save();
+	var id = setTimeout(function() {}, 0);
+	while (id--) {
+		clearTimeout(id);
+	}
+	try{bot.disconnect();}catch(e){}
+	setTimeout(start,2000);
+};
 function save(){
 	data.persistent.chanData=utils.chanData;
 	saveArr = data.persistent;
