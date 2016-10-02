@@ -27,6 +27,7 @@ dj.on("unload",(p,d)=>{
 			dj.queue[server][song].playing=false;
 			dj.queue[server][song].at-=5;
 			if(dj.queue[server][song].at<0)dj.queue[server][song].at=0;
+			dj.queue[server][song].startAt=dj.queue[server][song].at;
 		}
 	}
 	for(stream in streamlist){
@@ -64,6 +65,7 @@ function Song(user,id,title,server,info){
 	this.duration = dur.length==3?(+dur[0])*3600+(+dur[1])*60+(+dur[2]):(+dur[0])*60+(+dur[1]);
 	this.server=server;
 	this.at=0;
+	this.startAt=0;
 	this.atStr="";
 	youtubedl.exec(this.link, ['-o',"./Modules/dj/%(id)s.%(ext)s",'-x', '--audio-format', 'mp3'], {}, function exec(err, output) {
 	  'use strict';
@@ -192,6 +194,10 @@ dj.on("tick",(p)=>{
 				if(!dj.connected[dj.channels[server][0]])continue;
 				playSong(queue[0],dj.connected[dj.channels[server][0]],server);
 			}
+		}else{
+			if(queue[0].finished==true){
+				delSong(queue.shift());
+			}
 		}
 	}
 });
@@ -199,11 +205,18 @@ statusUpdates={};
 function serverStatus(server,event,p){
 	if(statusUpdates[server][0]++>=10)return;
 	setTimeout(serverStatus.bind(this,server,statusUpdates[server][1],p),2000);
+	if(dj.queue.length<1)return p.editReply(event,"```xl\nWaiting for a request\n```");
+	sTT = (secs)=>{
+		hours=~~(secs/3600)
+		mins=0;
+		return "N/A";
+	}
+	
 	statusMsg = "```xl\n\tDJ Status"+
-				"\nCurrent Song  : '"+dj.queue[server][0].title+"'"+
-				"\nSong Time     : "+dj.queue[server][0].atStr+"/"+dj.queue[server][0].durationStr+
-				"\nRequested By  : '"+dj.queue[server][0].requestedBy.name+"'"+
-				"\n"+(dj.queue[server].length>1?"Next Song : '"+dj.queue[server][1].title+"'":"No Other Songs In Queue")+
+				"\nCurrent Song  : '"+dj.queue[server][0].title.replace(/'/g,"`")+"'"+
+				"\nSong Time     : "+sTT(dj.queue[server][0].at+dj.queue[server][0].startAt)+"/"+sTT(dj.queue[server][0].duration)+
+				"\nRequested By  : '"+(""+dj.queue[server][0].requestedBy.name).replace(/'/g,"`")+"'"+
+				"\n"+(dj.queue[server].length>1?"Next Song : '"+dj.queue[server][1].title.replace(/'/g,"`")+"'":"No Other Songs In Queue")+
 				"\n```";
 	p.editReply(event,statusMsg);
 };
@@ -239,7 +252,7 @@ dj.commands = {
 					break; 
 				case "skip":
 					if(!streams[event.guild_id])p.reply(event,"Nothing to skip.");
-					song = dj.queue[0];
+					song = dj.queue[event.guild_id][0];
 					if(song.requestedBy.id!=user.id&&!isMod(event,user,p))return p.reply(event,"Skip Voting is a planned feature, for now only mods and the requester can skip songs.");
 					song = dj.queue[event.guild_id].shift();
 					console.log(song);
