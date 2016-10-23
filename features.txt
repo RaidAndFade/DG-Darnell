@@ -1,0 +1,18 @@
+```prolog
+DeathGuard Darnell to the rescue!
+WoW based bot with tons of features!
+Some features:
+   1: Accessible database of ALL Items in the game!
+   2: Commands to find data about Mounts, Titles, Achievements, and More!
+   3: Find Quest rewards and requirements!
+   3: Quick view of your realms Auction House!
+   4: Advanced Calculator that can have Custom Variables
+        and Convert Units of Measurement!
+   5: Instant access to the Weather of your area!
+   6: Translation command!
+   7: Music Bot!
+   8: Minigames like Tic-Tac-Toe!
+   9: Execute Code straight from discord!
+  10: And Much Much More!
+```
+Add me using https://gocode.it/dgd
