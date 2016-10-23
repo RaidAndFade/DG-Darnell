@@ -48,9 +48,9 @@ log.on("message_deleted",(p,msgId,channelId,event)=>{
 log.commands = {
 	stats: {
 		parse: utils.combinator.seq(utils.combinate.word.or(utils.combinate.user.or(utils.combinator.of("help"))),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.user.or(utils.combinator.of(""))),	
-		allowed: (p,user,args,event) => {
+		allowed: (p,user,args,event,helpReq) => {
 			console.log(user);
-			return p.owner==user.id;
+			return (typeof p.bot.servers[event.guild_id]=="undefined")?user.id == p.owner:(user.id==p.bot.servers[event.guild_id].owner_id || user.id == p.owner);
 		},
 		aliases: ["stat"],
 		usage: "stats",
@@ -82,7 +82,7 @@ log.commands = {
 						});
 					}else{
 						p.bot.getMember({serverID:p.bot.channels[chan].guild_id,userID:args[1].replace("<@","").replace(">","")},function(err,res){
-							if(err){id=event.author.id;}else{id=res.user.id;}//if user doesn't exist return generic.
+							if(err){id=event.author.id;}else{id=res.user.id;}//if user doesn't exist return sender.
 							p.mysql.query("SELECT * FROM `log` WHERE `userId`=? AND `channelId`=? AND `flags`%2=1 ORDER BY `date` DESC LIMIT 5;",[id,chan],function(err,res,fs){
 								out="";
 								count=1;
@@ -161,15 +161,16 @@ log.commands = {
 		}
 	},
 	log: {
-		parse: utils.combinator.seq(utils.combinate.word.or(utils.combinate.user.or(utils.combinator.of("help"))),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinate.digits.or(utils.combinator.of("")))),	
-		allowed: (p,user,args,event) => {
-			console.log(user);
+		parse: utils.combinator.seq(utils.combinate.word.or(utils.combinate.user.or(utils.combinator.of("help"))),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.snippet.or(utils.combinate.phrase.or(utils.combinator.all.or(utils.combinator.of(""))))),	
+		allowed: (p,user,args,event,helpReq) => {
+			if(!helpReq)console.log(user);
 			return p.owner==user.id;
 		},
 		aliases: [],
 		usage: "log",
 		desc: "Show message specific statistics",
 		run: (p, args, user, channel, event) => {
+			console.log(args);
 			subcom = args[0].toLowerCase();
 			args.shift();
 			args.shift();
@@ -178,10 +179,53 @@ log.commands = {
 				default:
 				case "help":
 					p.reply(event,"**Subcommands**:\n```\n"
-								+"\nlog search \"text\" : Search for "
-								+"\nlog deleted <@user> : Returns the most recent deleted msg <that @user has sent>"
-								+"\nlog edits <@user> : Returns the 5 most recent edits <that @user has done>"
+								+"\nlog unsafe \"snippet\" : Execute an sql query"
+								+"\nlog search \"text\" : Search for text in someone's message"
+								+"\nlog get <message id> : Returns the text of a message Id"
 								+"```");
+					break;
+				case "unsafe":
+					if(!(args[0] instanceof Object)||args[0].lang!="sql")return p.reply(event,"Make sure you are using a snippet, and that the snippet is in SQL");
+					args[0].code=(""+args[0].code).replace(/\$\{this\.channel\}/g,channel);
+					if(event.guild_id)args[0].code=(""+args[0].code).replace(/\$\{this\.guild\}/g,event.guild_id);
+					console.log(args[0].code);
+					p.mysql.query(args[0].code,[],function(err,res,fs){
+						if(err)return p.reply(event,""+err);
+						var columns=[];
+						var rows=[];
+						var left=5;
+						for(var row of res){
+							left--;
+							if(left<0)break;
+							var currow = [];
+							for(var col in row){
+								var val = row[col];
+								if(!(col in columns))columns.push(col);
+								currow[col]=val;
+							}
+							rows.push(currow);
+						}
+						var out="```\n"
+						for(var col of columns){
+							
+							out+=col;
+							if(col != columns[columns.length-1])
+								out+=" | ";
+							else 
+								out+="\n";
+						}
+						for(var row of rows){
+							for(var col in row){
+								out+=row[col];
+								if(col != columns[columns.length-1])
+									out+=" | ";
+								else 
+									out+="\n";
+							}
+						}
+						out+="\n```";
+						p.reply(event,""+out);
+					});
 					break;
 			}			
 		}

@@ -8,7 +8,7 @@ translate.name="Translate";
 translate.commands = {
 	translate: {
 		aliases: [],
-		allowed: (p,user,args,event) => {
+		allowed: (p,user,args,event,helpReq) => {
 			return true;
 		},
 		parse: utils.combinator.seq(utils.combinate.phrase.or(utils.combinator.of("help")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.word.or(utils.combinator.of("auto")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of("en"))),
@@ -17,7 +17,7 @@ translate.commands = {
 		run: (p, args, user, channel, event) => {
 			if(args[0]=="help"){
 				return p.reply(event,"```\nTranslate command usage:"+
-										"\ntranslate \"<phrase>\" <outputLanguage> <inputLanguage>"+
+										"\ntranslate \"<phrase>\" <inputLanguage> <outputLanguage>"+
 										"\n```");
 			}else{
 				path="/translation/text/translate"+
@@ -36,7 +36,10 @@ translate.commands = {
 							respJ+=chunk;
 						});
 						resp.on('end',()=>{
-							respO = JSON.parse(respJ).outputs[0];
+							console.log(respJ);
+							respO = JSON.parse(respJ);
+							if(!("outputs" in respO))return p.reply(event,"Failed when translating!\nMake sure you are using ISO 639 language codes!\nhttp://www.loc.gov/standards/iso639-2/php/code_list.php ");
+							respO = respO.outputs[0];
 							p.reply(event,"Translating `"+args[0]+"` to `"+args[4]+"`\nResult : `"+respO.output+"`");
 						});
 					}).end();

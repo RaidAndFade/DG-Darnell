@@ -30,7 +30,7 @@ function bitmaskToArr(bitmask){
 test.commands = {
 	persistencytest: {
 		aliases: ["tstpersist"],
-		allowed: (p,user,args,event) => {
+		allowed: (p,user,args,event,helpReq) => {
 			return true;
 		}, 
 		usage: "persistencytest <new Var>",
@@ -54,7 +54,8 @@ test.commands = {
 	},
 	permissiontest: {
 		aliases: [],
-		allowed: (p, user, args, event)=>{
+		allowed: (p, user, args, event, helpReq)=>{
+			if(helpReq)return true;
 			console.log("Checking "+user.username+" if allowed to use PERMISSIONTEST");
 			console.log("~PERMISSIONTEST BEGINS~");
 			setTimeout(p.reply.bind(this,event,"You are "+(user.id==p.owner?"":"not ")+"the owner of this bot..."),0);

@@ -224,7 +224,7 @@ function serverStatus(server,event,p){
 dj.commands = {
 	dj: {
 		aliases: ["music"],
-		allowed: (p,user,args,event) => {
+		allowed: (p,user,args,event,helpReq) => {
 			return true;
 		},
 		usage: "dj help",
