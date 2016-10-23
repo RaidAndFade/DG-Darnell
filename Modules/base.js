@@ -381,16 +381,32 @@ base.commands={
 		run: (p,args,user,channel,event) => {
 			if(typeof event.guild_id === "undefined")return p.reply(event,"Might want to use that command in a server...");
 			server = p.bot.servers[event.guild_id];
+			voiceChans = 0;
+			textChans = 0;
+			hiddenChans = 0;
+			for(var chanID in server.channels){
+				var chan = server.channels[chanID];
+				console.log(chan.permissions.role[event.guild_id]);
+				if(chan.type=="text")textChans++;
+				if(chan.type=="voice")voiceChans++;
+				if(chan.permissions.role[event.guild_id]&&chan.permissions.role[event.guild_id].deny>0)hiddenChans++;
+			}
+			onlineUsers = 0;
+			for(var userId in server.members){
+				var user = server.members[userId];
+				if(user.status!="offline")onlineUsers++;
+			}
 			p.reply(event,"```prolog\n"+
-							"\n Server: "+server.name.replace(/'/g,"").replace(/```/g,"'''")+
-							"\n     Id: "+server.id+
-							"\n Region: "+server.region.replace(/'/g,"`")+
-							"\nMembers: "+Object.keys(server.members).length+" members ("+server.member_count+" total)"+
-							"\n  Roles: "+Object.keys(server.roles).length+" roles "+(Object.keys(server.roles).length>0?"(Use 'rolelist' cmd for list)":"")+
-							"\n Emojis: "+Object.keys(server.emojis).length+" emojis "+(Object.keys(server.emojis).length>0?"(Use 'emojilist' cmd for list)":"")+
-							"\n  Owner: "+p.bot.users[server.owner_id].username+"#"+p.bot.users[server.owner_id].discriminator+
-							"\n   Icon: https://discordapp.com/api/guilds/"+server.id+"/icons/"+server.icon+".jpg"+
-							"\nCreated: "+(""+new Date((server.id/4194304)+1420070400000))+
+							"\n  Server: "+server.name.replace(/'/g,"").replace(/```/g,"'''")+
+							"\n      Id: "+server.id+
+							"\n  Region: "+server.region.replace(/'/g,"`")+
+							"\nChannels: "+textChans+" Text ("+hiddenChans+" Hidden)/ "+voiceChans+" Voice "+
+							"\n Members: "+server.member_count+" members ("+onlineUsers+" online)"+
+							"\n   Roles: "+Object.keys(server.roles).length+" roles "+(Object.keys(server.roles).length>0?"(Use 'rolelist' cmd for list)":"")+
+							"\n  Emojis: "+Object.keys(server.emojis).length+" emojis "+(Object.keys(server.emojis).length>0?"(Use 'emojilist' cmd for list)":"")+
+							"\n   Owner: "+p.bot.users[server.owner_id].username+"#"+p.bot.users[server.owner_id].discriminator+
+							"\n    Icon: https://discordapp.com/api/guilds/"+server.id+"/icons/"+server.icon+".jpg"+
+							"\n Created: "+(""+new Date((server.id/4194304)+1420070400000))+
 							"\n```");
 			//p.reply(event,"In "+Object.keys(p.bot.channels).length+" channels on "+Object.keys(p.bot.servers).length+" servers with "+Object.keys(p.bot.users).length+" users");
 		}
