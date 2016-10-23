@@ -14,7 +14,7 @@ scope={};
 math.commands={
 	random: {
 		aliases: ["pick"],
-		allowed: (p,user,args,event) => {
+		allowed: (p,user,args,event,helpReq) => {
 			return true;
 		},
 		usage: "random <choice1> <choice2>",
