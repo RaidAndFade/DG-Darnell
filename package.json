@@ -18,10 +18,11 @@
   "homepage": "https://github.com/memanlolz/DG-Darnell#readme",
   "dependencies": {
     "child_process": "^1.0.2",
-    "discord.io": "^2.2.2",
+    "discord.io": "^2.2.4",
     "events": "^1.1.1",
     "fs": "0.0.1-security",
-    "mathjs": "^3.5.3",
+    "html-entities": "^1.2.0",
+    "mathjs": "^3.6.0",
     "mysql": "^2.11.1",
     "node-opus": "^0.2.2",
     "parsimmon": "^0.9.2",
