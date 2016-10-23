@@ -40,51 +40,57 @@ function watchModule(mod){
 	});
 }
 function reloadModule(file){
-	console.log(Reloading);
-	for(k in Reloading){
-		m=Reloading[k];
-		if(m==file)return;
-	}
-	Reloading.push(file);
-	setTimeout(()=>{
-		Reloading.shift(Reloading.indexOf(file),1);
-		Modules[file]=reload("./Modules/"+file);
+	try{
+		console.log(Reloading);
+		for(k in Reloading){
+			m=Reloading[k];
+			if(m==file)return;
+		}
+		Reloading.push(file);
+		setTimeout(()=>{
+			Reloading.shift(Reloading.indexOf(file),1);
+			Modules[file]=reload("./Modules/"+file);
+			if(data.persistent.modData[file])
+				Modules[file].emit("load",utils,data.persistent.modData[file]);
+			else 
+				Modules[file].emit("load",utils,{});
+			Modules[file].utils=utils;
+			pad2 = new Array(40-file.length).join(" ");
+			console.log("= RELOADED "+file+pad2+"=");
+		},2000);
+		pad1 = new Array(39-file.length).join(" ");
+		console.log("= RELOADING "+file+pad1+"=");
+		if(!data.persistent.modData[file])data.persistent.modData[file]={}
+		Modules[file].emit("unload",utils,data.persistent.modData[file]);
+		delete require.cache[require.resolve("./Modules/"+file)];
+		delete Modules[file];
+	}catch(e){}
+}
+function loadModule(file){
+	try{
+		pad1 = new Array(41-file.length).join(" ");
+		console.log("= LOADING "+file+pad1+"=");
+		Modules[file]=require("./Modules/"+file);
 		if(data.persistent.modData[file])
 			Modules[file].emit("load",utils,data.persistent.modData[file]);
 		else 
 			Modules[file].emit("load",utils,{});
 		Modules[file].utils=utils;
-		pad2 = new Array(40-file.length).join(" ");
-		console.log("= RELOADED "+file+pad2+"=");
-	},2000);
-	pad1 = new Array(39-file.length).join(" ");
-	console.log("= RELOADING "+file+pad1+"=");
-	if(!data.persistent.modData[file])data.persistent.modData[file]={}
-	Modules[file].emit("unload",utils,data.persistent.modData[file]);
-    delete require.cache[require.resolve("./Modules/"+file)];
-	delete Modules[file];
-}
-function loadModule(file){
-	pad1 = new Array(41-file.length).join(" ");
-	console.log("= LOADING "+file+pad1+"=");
-	Modules[file]=require("./Modules/"+file);
-	if(data.persistent.modData[file])
-		Modules[file].emit("load",utils,data.persistent.modData[file]);
-	else 
-		Modules[file].emit("load",utils,{});
-	Modules[file].utils=utils;
-	pad2 = new Array(42-Modules[file].name.length).join(" ");
-	console.log("= LOADED "+Modules[file].name+pad2+"=");
+		pad2 = new Array(42-Modules[file].name.length).join(" ");
+		console.log("= LOADED "+Modules[file].name+pad2+"=");
+	}catch(e){}
 }
 function unloadModule(file){
-	pad1 = new Array(39-Modules[file].name.length).join(" ");
-	console.log("= UNLOADING "+file+pad1+"=");
-	if(!data.persistent.modData[file])data.persistent.modData[file]={}
-	Modules[file].emit("unload",utils,data.persistent.modData[file]);
-    delete require.cache[require.resolve("./Modules/"+file)];
-	delete Modules[file];
-	pad2 = new Array(40-file.length).join(" ");
-	console.log("= UNLOADED "+file+pad2+"=");
+	try{
+		pad1 = new Array(39-Modules[file].name.length).join(" ");
+		console.log("= UNLOADING "+file+pad1+"=");
+		if(!data.persistent.modData[file])data.persistent.modData[file]={}
+		Modules[file].emit("unload",utils,data.persistent.modData[file]);
+		delete require.cache[require.resolve("./Modules/"+file)];
+		delete Modules[file];
+		pad2 = new Array(40-file.length).join(" ");
+		console.log("= UNLOADED "+file+pad2+"=");
+	}catch(e){}
 }
 /******************* MODULE UTILS ******************/
 utils={
@@ -107,15 +113,15 @@ utils={
 		all			: combinate.all,
 		eof			: combinate.eof,
 		word		: combinate.regexp(/\S+/),
-		phrase      : combinate.regexp(/\"(\\.|[^\"])*\"/).map((res)=>{console.log([res,res.substr(1,res.length-2)]);return res.substr(1,res.length-2);}).or(combinate.regexp(/\S+/)),
-		user		: combinate.regexp(/<@!?[0-9]+>/),
+		phrase      : combinate.regexp(/\"(\\.|[^\"])*\"/).map((res)=>{return res.substr(1,res.length-2);}).or(combinate.regexp(/\S+/)),
+		user		: combinate.regexp(/<@!?[0-9]+>/).map((res)=>{return res.replace(/[\@\!\?\<\>]+/g,"");}).map(Number).or(combinate.regexp(/[0-9]+/).map(Number)),
 		channel		: combinate.regexp(/<#[0-9]+>/),
-		snippet		: combinate.regexp(/```\S+\n(.*?)```/),
-		bool		: combinate.regexp(/(true|false)/i).map(Boolean)
+		snippet		: combinate.regexp(/```(\S+)\n(.*?)\n```/).map((res)=>{var exp = /```(\S+)\n(.*?)\n```/;var reg = exp.exec(res);var lang=reg[1];var code=reg[2];return {lang:lang,code:code};}),
+		bool		: combinate.regexp(/(true|false)/i).map((res)=>{return res=="true";})
 	},
 	combinator:	combinate,
-	sendMSG:	(event,msg,del=[true,30000],callback=(e,d)=>{})=>{
-		if(typeof del == "function"){callback = del;del=[true,30000];}
+	sendMSG:	(event,msg,del=[true,30000,false],callback=(e,d)=>{})=>{
+		if(typeof del == "function"){callback = del;del=[true,30000,false];}
 		msg = msg.substr(0,2000); 
 		bot.sendMessage({
 			to: event.channel_id,
@@ -124,26 +130,27 @@ utils={
 			data.ownMsgs.push(d.id);
 			callback(e,d);
 			if(del[0]){
-				data.persistent.delQueue[event.id]=[event.channel_id,d.id,(new Date).getTime()+del[1]];
+				if(utils.chanData[event.channel_id].autoDelete||del[2])data.persistent.delQueue[event.id]=[event.channel_id,d.id,(new Date).getTime()+del[1]];
 			}
 		});
 	},
-	sendTo:	(to,msg,del=[true,30000],callback=(e,d)=>{})=>{
-		if(typeof del == "function"){callback = del;del=[true,30000];}
+	sendTo:	(to,msg,del=[true,30000,false],callback=(e,d)=>{})=>{
+		if(typeof del == "function"){callback = del;del=[true,30000,false];}
 		msg = msg.substr(0,2000); 
 		bot.sendMessage({
 			to: to,
 			message: msg
 		},function(e,d){
+			if(e)return console.log({Err:e,Args:{c:to,m:msg}});
 			data.ownMsgs.push(d.id);
 			callback(e,d);
 			if(del[0]){
-				data.persistent.delQueue[event.id]=[event.channel_id,d.id,(new Date).getTime()+del[1]];
+				if(utils.chanData[to].autoDelete||del[2])data.persistent.delQueue[event.id]=[to,d.id,(new Date).getTime()+del[1]];
 			}
 		});
 	},	
-	reply:	(event,msg,del=[true,30000],shouldEdit=true,callback=(e,d)=>{})=>{
-		if(typeof del == "function"){callback = del;del=[true,30000];}
+	reply:	(event,msg,del=[true,30000,false],shouldEdit=true,callback=(e,d)=>{})=>{
+		if(typeof del == "function"){callback = del;del=[true,30000,false];}
 		msg = msg.substr(0,2000);
 		edit=false;
 		for(repk in data.commandReplies){
@@ -162,8 +169,8 @@ utils={
 				data.commandReplies[event.id]=d.id;
 				callback(e,d);
 				if(del[0]){
-					data.persistent.delQueue[event.id]=[event.channel_id,event.id,(new Date).getTime()+del[1]];
-					data.persistent.delQueue[d.id]=[event.channel_id,d.id,(new Date).getTime()+del[1]];
+					if(utils.chanData[event.channel_id].autoDelete||del[2])data.persistent.delQueue[event.id]=[event.channel_id,event.id,(new Date).getTime()+del[1]];
+					if(utils.chanData[event.channel_id].autoDelete||del[2])data.persistent.delQueue[d.id]=[event.channel_id,d.id,(new Date).getTime()+del[1]];
 				}
 			});
 		}
@@ -184,8 +191,8 @@ utils={
 		},(e,d)=>{
 			callback(e,d);
 			if(del[0]){
-				data.persistent.delQueue[event.id]=[event.channel_id,event.id,(new Date).getTime()+del[1]];
-				data.persistent.delQueue[d.id]=[event.channel_id,d.id,(new Date).getTime()+del[1]];
+				if(utils.chanData[event.channel_id].autoDelete)data.persistent.delQueue[event.id]=[event.channel_id,event.id,(new Date).getTime()+del[1]];
+				if(utils.chanData[event.channel_id].autoDelete)data.persistent.delQueue[d.id]=[event.channel_id,d.id,(new Date).getTime()+del[1]];
 			}
 		});
 	},
@@ -223,6 +230,25 @@ bot.on('ready', function(rawEvent) {
 	utils.ownId=rawEvent.d.user.id;
 	for(modf in Modules){
 		Modules[modf].emit("ready",utils,rawEvent);
+	}
+	for(var channel in bot.channels){
+		if(!(channel in utils.chanData))
+			utils.chanData[channel]=utils.chanData.def;
+		for(var key in utils.chanData.def){
+			if(!(key in utils.chanData[channel])){
+				utils.chanData[channel][key]=utils.chanData.def[key];
+			}
+		}
+	}
+	for(var user in bot.users){
+		var channel = bot.users[user].id;
+		if(!(channel in utils.chanData))
+			utils.chanData[channel]=utils.chanData.def;
+		for(var key in utils.chanData.def){
+			if(!(key in utils.chanData[channel])){
+				utils.chanData[channel][key]=utils.chanData.def[key];
+			}
+		}
 	}
 	setTimeout(()=>{console.log("Started Ticking!");tick()},5000);
 });
@@ -262,7 +288,9 @@ bot.on('message', function(unusable, unusable2, channelId, message, rawEvent) {
 				console.log(run+" : "+comd+"/"+comk);
 				if(run){
 					if("allowed" in coms[comk]){
-						if(coms[comk].allowed(utils,user,args,rawEvent.d)==false){
+						canrun = coms[comk].allowed(utils,user,args,rawEvent.d,false);
+						console.log(comk+" : "+canrun);
+						if(canrun==false){
 							utils.reply(rawEvent.d,"You don't have permission to use that command!");
 							return;
 						}
@@ -287,10 +315,10 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 	try{
 	if(!utils.chanData[channelId].settings.enabled)return;
 	try{user.tag="<@"+user.id+">"}catch(e){};
-	try{rawEvent.d.guild_id=bot.channels[channelId].guild_id;}catch(e){}
+	try{rawEvent.guild_id=bot.channels[channelId].guild_id;}catch(e){}
 	for(modf in Modules){
 		if(utils.chanData[channelId].ModBlacklist.indexOf(modf)!=-1)continue;
-		try{Modules[modf].emit("message_updated",utils,messageId,user,channelId,message,rawEvent);}catch(e){console.log(e);}
+		try{Modules[modf].emit("message_updated",utils,messageId,user,channelId,message,rawEvent);}catch(e){}
 	}
 	console.log(message);
 	if(rawEvent.id in data.ownMsgs){return;}
@@ -317,7 +345,7 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 					if(coms[comk].parse){
 						if(coms[comk].parse.parse(args.join(" ")).status==false){console.log([args,args.join(" "),coms[comk].parse.parse(args.join(" "))]);return;}
 						if("allowed" in coms[comk]){
-							if(coms[comk].allowed(utils,user,coms[comk].parse.parse(args.join(" ")).value,rawEvent)==false){
+							if(coms[comk].allowed(utils,user,coms[comk].parse.parse(args.join(" ")).value,rawEvent,false)==false){
 								utils.reply(rawEvent,"You don't have permission to use that command!");
 								return;
 							}
@@ -325,7 +353,7 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 						coms[comk].run(utils,coms[comk].parse.parse(args.join(" ")).value,user,channelId,rawEvent);
 					}else{
 						if("allowed" in coms[comk]){
-							if(coms[comk].allowed(utils,user,args,rawEvent)==false){
+							if(coms[comk].allowed(utils,user,args,rawEvent,false)==false){
 								utils.reply(rawEvent,"You don't have permission to use that command!");
 								return;
 							}
@@ -343,6 +371,7 @@ bot.on('messageDelete', function(rawEvent){
 	messageId=rawEvent.d.id;
 	if(!(channelId in utils.chanData))
 		utils.chanData[channelId]=utils.chanData.def;
+	try{rawEvent.d.guild_id=bot.channels[channelId].guild_id;}catch(e){}
 	for(var key in utils.chanData.def){
 		if(!(key in utils.chanData[channelId])){
 			console.log(key);
@@ -498,10 +527,10 @@ function load(callback){
 process.stdin.resume();
 process.on('exit', exitHandler);
 process.on('SIGINT', exitHandler);
+process.on('uncaughtException', errorHandler);
 function exitHandler(options, err) {
 	stop();
 }
-process.on('uncaughtException', errorHandler);
 function errorHandler(err){
 	console.log(err);
 	data.persistent.errors.push(err);
