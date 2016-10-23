@@ -4,10 +4,18 @@ class EE extends EventEmitter{}
 const wh = new EE();
 wh.name="WoWDB";
 
-wh.on("load",(p)=>{
+var persistentVar={};
+var channelRealms={};
+wh.on("load",(p,data)=>{
+	if(data.persistentVar)persistentVar=data.persistentVar;
+	if(persistentVar.chRealms)channelRealms=persistentVar.chRealms;
 	console.log("WoWDB loaded!");
 });
-
+wh.on("unload",(p,data)=>{
+	persistentVar.chRealms = channelRealms;
+	data.persistentVar=persistentVar;
+	console.log("WoWDB unloaded!");
+});
 //wh.on("message",(p,user,channelId,message,rawEvent)=>{console.log(user.id+" said "+rawEvent.d.id)});
 //wh.on("message_updated",(p,msgId,user,channelId,message,rawEvent)=>{console.log(user.id+" edited "+msgId)});
 //wh.on("message_deleted",(p,msgId,user,channelId,message,rawEvent)=>{console.log(user.id+" deleted "+msgId)});
@@ -261,7 +269,7 @@ function get(event,args,p){
 		p.cons.wowdb.getConnection((err,con)=>{
 			if(err)return p.reply(event,"**DB ERROR**: "+err);
 			searchQuery = args[4];
-			if(isNaN(searchQuery))return p.reply(event,"Id has to be a number");
+			if(isNaN(searchQuery.replace("@","")))return p.reply(event,"Id has to be a number");
 			p.reply(event,"Retrieving `"+subsubcom.toLowerCase()+" "+searchQuery+"`",(e,d)=>{
 				switch(subsubcom.toLowerCase()){
 					case "mount":
@@ -281,16 +289,7 @@ function get(event,args,p){
 					break;
 					case "item":
 					{
-						con.query(("SELECT * FROM `Item-sparse` WHERE `Id`=? LIMIT 1;"),[searchQuery],function(err,res,fs){
-							if(err)return p.reply(event,"**Error**: "+err);
-							if(res.length==0)return p.reply(event,"No Items with the Id `"+searchQuery+"` were found!");
-							itemData=res[0];
-							itemStr="```py\n";
-							itemStr+="Item : '"+itemData.Name+"'";
-							itemStr+="Restrictions : \n\t"+(itemData.AllowableClass==-1?"Any":classList[itemData]);
-							itemStr+="\n```";//TODO < Doing easier stuff first>
-							p.reply(event,JSON.stringify(itemData));
-						});
+						p.reply(event,"https://api.gocode.it/wowdb/img/item/"+searchQuery.replace("@","/"));//Properly download, cache, and reupload
 					}
 					break;
 					case "spell":
@@ -377,10 +376,10 @@ function get(event,args,p){
 							if(res[0].SuggestedGroupNum!=0)quest += "Suggested No. of Players : '"+res[0].SuggestedGroupNum+"'\n";
 							
 							questRequirements = "";
-							if(res[0].RewardMoney<0)questRequirements += "\t"+(~~(Math.abs(res[0].RewardMoney)/10000)>0?(~~(Math.abs(res[0].RewardMoney)/10000))+" Gold ":"")+(~~(Math.abs(res[0].RewardMoney)/100)%100>0?(~~(Math.abs(res[0].RewardMoney)/100)%100)+" Silver ":"")+(~~(Math.abs(res[0].RewardMoney)%10000)>0?(~~(Math.abs(res[0].RewardMoney)%10000))+" Copper ":"")+"\n";
+							if(res[0].RewardMoney<0)questRequirements += "\t"+(~~(Math.abs(res[0].RewardMoney)/10000)>0?(~~(Math.abs(res[0].RewardMoney)/10000))+" Gold ":"")+(~~(Math.abs(res[0].RewardMoney)/100)%100>0?(~~(Math.abs(res[0].RewardMoney)/100)%100)+" Silver ":"")+(~~(Math.abs(res[0].RewardMoney)%100)>0?(~~(Math.abs(res[0].RewardMoney)%100))+" Copper ":"")+"\n";
 							if(res[0].QuestMinLevel>0)questRequirements += "\tLevel : "+res[0].QuestMinLevel+"\n";
 							questRewards = "";
-							if(res[0].RewardMoney>0)questRewards += "\t"+(~~(res[0].RewardMoney/10000)>0?(~~(res[0].RewardMoney/10000))+"Gold":"")+(~~(res[0].RewardMoney/100)>0?(~~(res[0].RewardMoney/100)%100)+"Silver":"")+(~~(res[0].RewardMoney%10000)>0?(~~(res[0].RewardMoney%10000))+"Copper":"")+"\n";
+							if(res[0].RewardMoney>0)questRewards += "\t"+(~~(res[0].RewardMoney/10000)>0?(~~(res[0].RewardMoney/10000))+"Gold":"")+(~~(res[0].RewardMoney/100)>0?(~~(res[0].RewardMoney/100)%100)+"Silver":"")+(~~(res[0].RewardMoney%100)>0?(~~(res[0].RewardMoney%100))+"Copper":"")+"\n";
 							questSuff = "Summary : '"+res[0].Summary.replace(/$B/g,"\n\t").replace(/'/g,"`")+"'";
 							
 							hasNextQuest=res[0].RewardNextQuest!=0;gotNextQuest=false||!hasNextQuest;nextQuest="";
@@ -548,10 +547,81 @@ function get(event,args,p){
 	}else{
 		subsubcomstr="";
 		for(subsubcom in possibleSubSubComs){
-			subsubcomstr+=p.pad("\nwd get "+subsubcom+" <"+subsubcom+"id>",45)+" : Get information about a"+(subsubcom.match(/^[aeiou]/)?"n":"")+" "+subsubcom+".";
+			subsubcomstr+=p.pad("\nwd get "+subsubcom+" <"+subsubcom+"id>",35)+" : Get information about a"+(subsubcom.match(/^[aeiou]/)?"n":"")+" "+subsubcom+".";
 		}
-		p.reply(event,"```\nPossible Subcommands:\n"+subsubcomstr+"\n```");
+		suffix="Items can be requested at a specific ilvl by replacing the ID with \"id@ilvl\", ex. `19019@250`";
+		p.reply(event,"```\nPossible Subcommands:\n"+subsubcomstr+"\n\n"+suffix+"\n```");
 	}	
+}
+
+function auctions(event,args,p){
+	subsubcom = args.length>2&&args[2]!=""?args[2]:"help";
+	switch(subsubcom){
+		case "get" :
+			if(args.length<4||args[4]==""||isNaN(args[4]))return p.reply(event,"Please remember to enter an item id to check for!\nUse `wd search item \"item name\"` to find the item id of an item.");
+			if(event.channel_id in channelRealms)
+				p.cons.wowauc.getConnection((err,con)=>{
+					if(err)return p.reply(event, "**Database error!**: "+err);
+					var item = args[4];
+					con.query("SELECT * FROM `ItemHistoryDaily` WHERE `item` = ? AND `house` = ? ORDER BY `when` DESC LIMIT 1;",[item,channelRealms[event.channel_id]],(err,res)=>{
+						if(err)return p.reply(event, "**Query error!**: "+err);
+						var pricemin = (~~(res[0].pricemin/10000)>0?(~~(res[0].pricemin/10000))+" G ":"")+(~~(res[0].pricemin/100%100)>0?(~~(res[0].pricemin/100)%100)+" S ":"")+(~~(res[0].pricemin%100)>0?(~~(res[0].pricemin%100))+" C ":"");
+						var priceavg = (~~(res[0].priceavg/10000)>0?(~~(res[0].priceavg/10000))+" G ":"")+(~~(res[0].priceavg/100%100)>0?(~~(res[0].priceavg/100)%100)+" S ":"")+(~~(res[0].priceavg%100)>0?(~~(res[0].priceavg%100))+" C ":"");
+						var pricemax = (~~(res[0].pricemax/10000)>0?(~~(res[0].pricemax/10000))+" G ":"")+(~~(res[0].pricemax/100%100)>0?(~~(res[0].pricemax/100)%100)+" S ":"")+(~~(res[0].pricemax%100)>0?(~~(res[0].pricemax%100))+" C ":"");
+						p.reply(event,	"```\n"+
+										(pricemin!=""?"Minimum price right now is "+pricemin+"\n":"")+
+										(priceavg!=""?"Average price right now is "+priceavg+"\n":"")+
+										(pricemax!=""?"Maximum price right now is "+pricemax+"\n":"")+
+										"```");
+					});
+				});
+			else
+				return p.reply(event, "This channel does not have a specific auction house!\nSet one using `wd auc set <realmname@region>`\nMake sure realmname is all lowercase.\nEx:\n`wd auc set rexxar@us`\n`wd auc set aerie-peak@eu`");//Force this to autodelete
+			break;
+		case "realm":
+			sub3com = args.length>4&&args[4]!=""?args[4]:"help";
+			if(sub3com=="set"){
+				if(!(typeof event.guild_id == undefined || (event.guild_id&&p.bot.servers[event.guild_id]&&user.id==p.bot.servers[event.guild_id].owner_id) || user.id == p.owner)&&!(user.id == event.channel_id || user.id == p.owner)){
+					return p.reply(event,"Only the owner of the server can use this command! Sorry!\nDM me if you want to use this on another realm!\nOr invite me to your server by using the `invitelink` command");//Force this to autodelete
+				}
+				console.log(args);
+				if(args.length<6||args[6]==""||args[6].indexOf("@")==-1)return p.reply(event,"Command Usage : \n`wd auc set <realm@region>` with everything lowercase\nEx:\n`wd auc set rexxar@us`\n`wd auc set aerie-peak@eu`");
+				var realmstr = args[6];
+				var realm = realmstr.split("@")[0];
+				var region = realmstr.split("@")[1];
+				p.cons.wowauc.getConnection((err,con)=>{
+					if(err)return p.reply(event, "**Database error!**: "+err);
+					con.query("SELECT * FROM `Realms` WHERE `slug` LIKE ? AND `region` LIKE ? LIMIT 1;",[realm,region],(err,res)=>{
+							if(err)return p.reply(event, "**Query error!**: "+err);
+							channelRealms[event.channel_id]=res[0].house;
+							return p.reply(event,"Channel auction house set to `"+res[0].name+"@"+res[0].region.toLowerCase()+"`");
+					});
+				});
+			}else{
+				if(event.channel_id in channelRealms)
+					p.cons.wowauc.getConnection((err,con)=>{
+						if(err)return p.reply(event, "**Database error!**: "+err);
+						con.query("SELECT * FROM `Realms` WHERE `house` = ? AND locale != ''",[channelRealms[event.channel_id]],(err,res)=>{
+							if(err)return p.reply(event, "**Query error!**: "+err);
+							var realmList = "";
+							for(var tres of res){
+								realmList+="`"+tres.name+"`/";
+							}
+							realmList=realmList.slice(0,realmList.length-1);
+							return p.reply(event, "This channel's realm(s) : "+realmList.toLowerCase()+" On `"+res[0].region+"`");
+						});
+					});
+				else	
+					return p.reply(event, "This channel does not have a specific auction house!\nSet one using `wd auc set <realmname@region>`\nMake sure realmname is all lowercase.\nEx:\n`wd auc set rexxar@us`\n`wd auc set aerie-peak@eu`");//Force this to autodelete
+			}
+			break;
+		default:
+			return p.reply(event,	"```py"+
+									"\nwd auc help         : Shows this text"+
+									"\nwd auc realm        : Set/Get this channel`s realm"+
+									"\nwd auc get <itemid> : Get info about an item from it`s Id"+
+									"\n```");
+	}
 }
 
 wh.commands = {
@@ -561,6 +631,8 @@ wh.commands = {
 			utils.combinate.word.or(utils.combinator.of("help")),
 			utils.combinate.space.or(utils.combinator.of("")),
 			utils.combinate.digits.or(utils.combinate.phrase.or(utils.combinator.of(""))),
+			utils.combinate.space.or(utils.combinator.of("")),
+			utils.combinate.phrase.or(utils.combinator.of("")),
 			utils.combinate.space.or(utils.combinator.of("")),
 			utils.combinate.phrase.or(utils.combinate.all)
 		),	
@@ -572,8 +644,10 @@ wh.commands = {
 				default:
 				case "help":
 					p.reply(event,"```py"+
-							"\nwd get help    : Get info about an item/spell/itemset/etc."+
-							"\nwd search help : Search for an ingame item/spell/itemset/etc."+
+							"\nwd get help     : Get info about an item/spell/itemset/etc."+
+							"\nwd search help  : Search for an ingame item/spell/itemset/etc."+
+							"\nwd auc help     : Get information about the auction-hosue of a realm."+
+							"\nwd auction help : Alias for `wd auction`"+
 							"\n```");
 					break;
 				case "search":
@@ -582,11 +656,15 @@ wh.commands = {
 				case "get":
 					get(event,args,p);
 					break;
+				case "auction":
+				case "auc":
+					auctions(event,args,p);
+					break;
 			}
 		}
 	},
 	wddebug: {
-		allowed: (p,user,args,event)=>{
+		allowed: (p,user,args,event,helpReq)=>{
 			return user.id == p.owner;
 		},
 		parse: utils.combinator.seq(utils.combinate.word.or(utils.combinator.of("help")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinate.all)),
