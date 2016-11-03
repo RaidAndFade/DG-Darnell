@@ -1,3 +1,11 @@
+/**
+TODO--
+
+-Migrate server/channel settings to mysql instead of json
+
+
+*/
+
 
 const DiscordClient = require('discord.io');
 const bot = require("./UserPass.js").bot;
