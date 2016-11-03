@@ -16,11 +16,11 @@ log.on("message",(p,user,channelId,message,event)=>{
 	msg = event.content;
 	usr = event.author.id;
 	if(srv==-1){ 
-		p.mysql.query('INSERT INTO `log`(messageId,userId,channelID,origmsg,editmsg,date) VALUES(?,?,?,?,"[]",?)',[id,usr,chan,msg,(new Date).getTime()],function(err,res,fs){
+		p.mysql.query('INSERT INTO `log_chat`(messageId,userId,channelID,origmsg,editmsg,date) VALUES(?,?,?,?,"[]",?)',[id,usr,chan,msg,(new Date).getTime()],function(err,res,fs){
 			if(err)throw err;
 		});
 	}else{
-		p.mysql.query('INSERT INTO `log`(messageId,userId,channelId,serverId,origmsg,editmsg,date) VALUES(?,?,?,?,?,"[]",?)',[id,usr,chan,srv,msg,(new Date).getTime()],function(err,res,fs){
+		p.mysql.query('INSERT INTO `log_chat`(messageId,userId,channelId,serverId,origmsg,editmsg,date) VALUES(?,?,?,?,?,"[]",?)',[id,usr,chan,srv,msg,(new Date).getTime()],function(err,res,fs){
 			if(err)throw err;
 		});
 	}
@@ -30,19 +30,19 @@ log.on("message_updated",(p,msgId,user,channelId,message,event)=>{
 	chan = event.channel_id;
 	id = event.id;
 	msg = event.content;
-	p.mysql.query("SELECT * FROM `log` WHERE `messageId`=? AND `channelId`=? LIMIT 1;",[id,chan],function(err,res,fs){
+	p.mysql.query("SELECT * FROM `log_chat` WHERE `messageId`=? AND `channelId`=? LIMIT 1;",[id,chan],function(err,res,fs){
 		if(err)throw err;
 		js = res[0].editmsg;
 		if(js=="")js="[]";
 		msgs=JSON.parse(js);
 		msgs.push(msg);
-		p.mysql.query("UPDATE `log` SET `editmsg`=?, `flags`=`flags`+2, `updated`=? WHERE  `messageId`=? AND `channelId`=? LIMIT 1;",[JSON.stringify(msgs),(new Date).getTime(),id,chan]);
+		p.mysql.query("UPDATE `log_chat` SET `editmsg`=?, `flags`=`flags`+2, `updated`=? WHERE  `messageId`=? AND `channelId`=? LIMIT 1;",[JSON.stringify(msgs),(new Date).getTime(),id,chan]);
 	});
 });
 log.on("message_deleted",(p,msgId,channelId,event)=>{
 	chan = event.channel_id;
 	id = event.id;
-	p.mysql.query("UPDATE `log` SET `flags`=`flags`+1, `updated`=? WHERE  `messageId`=? AND `channelId`=? LIMIT 1;",[(new Date).getTime(),id,chan]);
+	p.mysql.query("UPDATE `log_chat` SET `flags`=`flags`+1, `updated`=? WHERE  `messageId`=? AND `channelId`=? LIMIT 1;",[(new Date).getTime(),id,chan]);
 });
 
 log.commands = {
@@ -69,7 +69,7 @@ log.commands = {
 				case "deleted":
 					if(args.length<2||args[1]==""){
 						id=event.author.id;
-						p.mysql.query("SELECT * FROM `log` WHERE `channelId`=? AND `flags`%2=1 ORDER BY `date` DESC LIMIT 5;",[chan],function(err,res,fs){
+						p.mysql.query("SELECT * FROM `log_chat` WHERE `channelId`=? AND `flags`%2=1 ORDER BY `date` DESC LIMIT 5;",[chan],function(err,res,fs){
 							out="";
 							count=1;
 							for(var row of res){
@@ -83,7 +83,7 @@ log.commands = {
 					}else{
 						p.bot.getMember({serverID:p.bot.channels[chan].guild_id,userID:args[1].replace("<@","").replace(">","")},function(err,res){
 							if(err){id=event.author.id;}else{id=res.user.id;}//if user doesn't exist return sender.
-							p.mysql.query("SELECT * FROM `log` WHERE `userId`=? AND `channelId`=? AND `flags`%2=1 ORDER BY `date` DESC LIMIT 5;",[id,chan],function(err,res,fs){
+							p.mysql.query("SELECT * FROM `log_chat` WHERE `userId`=? AND `channelId`=? AND `flags`%2=1 ORDER BY `date` DESC LIMIT 5;",[id,chan],function(err,res,fs){
 								out="";
 								count=1;
 								for(var row of res){
@@ -103,7 +103,7 @@ log.commands = {
 				case "edited":
 				case "changes":
 					if(args.length<2||args[1]==""){
-						p.mysql.query("SELECT * FROM `log` WHERE `channelId`=? AND `flags`>1 ORDER BY `date` DESC LIMIT 3;",[chan],function(err,res,fs){
+						p.mysql.query("SELECT * FROM `log_chat` WHERE `channelId`=? AND `flags`>1 ORDER BY `date` DESC LIMIT 3;",[chan],function(err,res,fs){
 							out="";
 							count=1;
 							for(var row of res){
@@ -123,9 +123,9 @@ log.commands = {
 								p.reply(event,out+"");
 						});
 					}else{
-						p.bot.getMember({serverID:p.bot.channels[chan].guild_id,userID:args[1].replace("<@","").replace(">","")},function(err,res){
+						p.bot.getMember({serverID:p.bot.channels[chan].guild_id,userID:(""+args[1])},function(err,res){
 							if(err){id=event.author.id;}else{id=res.user.id;}//if user doesn't exist return generic.
-							p.mysql.query("SELECT * FROM `log` WHERE `userId`=? AND `channelId`=? AND `flags`>1 ORDER BY `date` DESC LIMIT 3;",[id,chan],function(err,res,fs){
+							p.mysql.query("SELECT * FROM `log_chat` WHERE `userId`=? AND `channelId`=? AND `flags`>1 ORDER BY `date` DESC LIMIT 3;",[id,chan],function(err,res,fs){
 								out="";
 								count=1;
 								for(var row of res){
