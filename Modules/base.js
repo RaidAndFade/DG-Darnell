@@ -196,6 +196,13 @@ base.commands={
 					success=true;
 					status=-1;
 					for(var channel of Object.keys(utils.bot.servers[event.guild_id].channels)){
+						if(!(channel in utils.chanData))
+							utils.chanData[channel]=utils.chanData.def;
+						for(var key_t in utils.chanData.def){
+							if(!(key_t in utils.chanData[channel])){
+								utils.chanData[channel][key_t]=utils.chanData.def[key_t];
+							}
+						}
 						console.log(channel);
 						if(key in utils.chanData[channel].settings){
 							if(key in utils.chanDataDesc){
@@ -315,7 +322,24 @@ base.commands={
 		aliases: [],
 		desc: "Get some info about the bot",
 		run: (p,args,user,channel,event) => {
-			p.reply(event,"In "+Object.keys(p.bot.channels).length+" channels on "+Object.keys(p.bot.servers).length+" servers with "+Object.keys(p.bot.users).length+" users");
+			if(args.length<1){
+				var usercount = 0;
+				for(var serv in p.bot.servers){
+					var ser = p.bot.servers[serv];
+					usercount += ser.member_count;
+				}
+				p.reply(event,"In "+Object.keys(p.bot.channels).length+" channels on "+Object.keys(p.bot.servers).length+" servers with "+usercount+" users");
+			}else{
+				switch(args[0]){
+					case "servers":
+						servers = "";
+						for(var serverk in p.bot.servers){
+							server = p.bot.servers[serverk];
+							servers += "'"+server.name+"',";
+						}
+						p.reply(event,"I am on "+Object.keys(p.bot.servers).length+" servers!\n```py\n"+servers.substr(0,servers.length-1)+"\n```");
+				}
+			}
 		}
 	},
 	user:{
