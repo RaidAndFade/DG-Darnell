@@ -42,7 +42,9 @@ math.commands={
 			if(!scope[user.id]){
 				scope[user.id]={};
 			}
-			p.reply(event,""+MathJs.eval(args,scope[user.id]));
+			var reply = ""+MathJs.compile(args).eval(scope[user.id]);
+			if(reply.indexOf("function ")!==-1)return p.reply(event,"Invalid expression!");
+			p.reply(event,reply);
 		}
 	},
 	mathvars: {
