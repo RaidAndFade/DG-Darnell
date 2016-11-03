@@ -1,0 +1,28 @@
+const EventEmitter = require('events');
+class EE extends EventEmitter{}
+const test = new EE();
+test.name="Testing";
+
+var persistentVar="";
+test.on("load",(p,data)=>{
+	if(data.persistentVar)persistentVar=data.persistentVar;
+	console.log("Example loaded!");
+});
+test.on("unload",(p,data)=>{
+	data.persistentVar=persistentVar;
+	console.log("Example unloaded!");
+});
+
+test.commands = {
+	command:{
+		aliases: ["cmd"],
+		allowed: (p,user,args,event,helpReq) => {
+			return true;
+		}, 
+		usage: "cmd <arg>",
+		desc: "This is an example command",
+		run: (p, args, user, channel, event) => {
+		}
+	}
+};
+modules.export=test
