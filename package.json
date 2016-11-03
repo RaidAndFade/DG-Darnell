@@ -30,6 +30,7 @@
     "querystring": "^0.2.0",
     "request": "^2.75.0",
     "require-reload": "^0.2.2",
+    "strtotime": "^1.0.0",
     "twitter": "^1.4.0",
     "youtube-dl": "^1.11.1"
   }
