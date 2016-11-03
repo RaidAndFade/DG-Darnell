@@ -568,10 +568,10 @@ function auctions(event,args,p){
 						var pricemin = (~~(res[0].pricemin/10000)>0?(~~(res[0].pricemin/10000))+" G ":"")+(~~(res[0].pricemin/100%100)>0?(~~(res[0].pricemin/100)%100)+" S ":"")+(~~(res[0].pricemin%100)>0?(~~(res[0].pricemin%100))+" C ":"");
 						var priceavg = (~~(res[0].priceavg/10000)>0?(~~(res[0].priceavg/10000))+" G ":"")+(~~(res[0].priceavg/100%100)>0?(~~(res[0].priceavg/100)%100)+" S ":"")+(~~(res[0].priceavg%100)>0?(~~(res[0].priceavg%100))+" C ":"");
 						var pricemax = (~~(res[0].pricemax/10000)>0?(~~(res[0].pricemax/10000))+" G ":"")+(~~(res[0].pricemax/100%100)>0?(~~(res[0].pricemax/100)%100)+" S ":"")+(~~(res[0].pricemax%100)>0?(~~(res[0].pricemax%100))+" C ":"");
-						p.reply(event,	"```\n"+
-										(pricemin!=""?"Minimum price right now is "+pricemin+"\n":"")+
-										(priceavg!=""?"Average price right now is "+priceavg+"\n":"")+
-										(pricemax!=""?"Maximum price right now is "+pricemax+"\n":"")+
+						p.reply(event,	"```py\nData last updated '"+(""+new Date(res[0].when*1000))+"'\n"+
+										(pricemin!=""?"Minimum price was "+pricemin+"\n":"")+
+										(priceavg!=""?"Average price was "+priceavg+"\n":"")+
+										(pricemax!=""?"Maximum price was "+pricemax+"\n":"")+
 										"```");
 					});
 				});
