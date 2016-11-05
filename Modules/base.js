@@ -335,7 +335,7 @@ base.commands={
 						servers = "";
 						for(var serverk in p.bot.servers){
 							server = p.bot.servers[serverk];
-							servers += "'"+server.name+"',";
+							servers += "'"+server.name.replace(/'/g,"`")+"',";
 						}
 						p.reply(event,"I am on "+Object.keys(p.bot.servers).length+" servers!\n```py\n"+servers.substr(0,servers.length-1)+"\n```");
 				}
@@ -403,8 +403,14 @@ base.commands={
 		aliases: [],
 		desc: "Get some info about the server",
 		run: (p,args,user,channel,event) => {
-			if(typeof event.guild_id === "undefined")return p.reply(event,"Might want to use that command in a server...");
-			server = p.bot.servers[event.guild_id];
+			if(typeof event.guild_id === "undefined"&&args.length<1)return p.reply(event,"Might want to use that command in a server...");
+			//console.log(p.bot.servers[args[0]]);
+			if(args.length>=1&&(args[0] in p.bot.servers||typeof p.bot.servers[args[0]]!='undefined'||p.bot.servers[args[0]]!=null)){
+				server = p.bot.servers[args[0]];			
+			}else{
+				if(typeof event.guild_id === "undefined")return p.reply(event,"I don't recognize that server, sorry.");
+				server = p.bot.servers[event.guild_id];
+			}
 			voiceChans = 0;
 			textChans = 0;
 			hiddenChans = 0;
