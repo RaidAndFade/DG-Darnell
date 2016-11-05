@@ -11,16 +11,22 @@
 1. Make a file called `UserPass.js` in the same directory as `WoWDB.js`
 
 	```javascript 
-	var DiscordClient = require('discord.io');
-	var bot = new DiscordClient({
-		token: "<Your bot token>"
+	var Discord = require('discord.io');
+	var bot = new Discord.Client({
+		token: "Your bot token"
 	});
 	exports.bot = bot;
-	var Twitter = require('twitter');Twitter = new Twitter({consumer_key: '<twitter:conskey>',consumer_secret: '<twitter:consec>',access_token_key: '<twitter:accesskey>',access_token_secret: '<twitter:accessec>'});//Used for the twitter command
+	
+	//THIS IS REQUIRED FOR PERMISSIONS. YOU PROBABLY WANT TO SET THIS
+	exports.owner = "your own discord id";
+	
+	//THE NEXT TWO LINES ARE ONLY NEEDED FOR THE TWITTER MODULE. YOU CAN REMOVE THEM IF YOU DONT WANT THEM
+	var Twitter = require('twitter');Twitter = new Twitter({consumer_key: 'twitter:conskey',consumer_secret: 'twitter:consec',access_token_key: 'twitter:accesskey',access_token_secret: 'twitter:accessec'});//Used for the twitter command
 	exports.twitter=Twitter;
-	var mysql = require("mysql");mysql = mysql.createConnection({host:'<mysqldb:host>',user:'<mysqldb:user>',password:'<mysqldb:pass>',database:'<mysqldb:database>'});mysql.connect();//Used for the log
+	
+	//THE NEXT TWO LINES ARE ONLY NEEDED FOR THE LOG
+	var mysql = require("mysql");mysql = mysql.createConnection({host:'mysqldb:host',user:'mysqldb:user',password:'mysqldb:pass',database:'mysqldb:database'});mysql.connect();//Used for the log
 	exports.mysql=mysql;
-	exports.owner = "<your own discord id>";
 	```
 
 	MYSQL and Twitter are only required for some modules.
