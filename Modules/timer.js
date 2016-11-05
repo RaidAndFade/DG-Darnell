@@ -132,7 +132,9 @@ timer.commands = {
 					var timerchan = event.guild_id?event.guild_id:channel;
 					if(Object.keys(timers[timerchan]).length==0)return p.reply(event,"This server actually has no timers!\nCreate one using `timer create`");
 					for(var timerId in timers[timerchan]){
-						timerlist += "\t"+timerId+"\n";
+						var timer = timers[timerchan][timerId];
+						var next = new Date(timer[2]).getTime();
+						timerlist += "\t"+timerId+" ("+formatTime((next-now)/1000)+"Left)"+"\n";
 					}
 					timerlist+="```";
 					p.reply(event,timerlist);
