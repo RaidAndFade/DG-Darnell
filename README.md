@@ -11,7 +11,7 @@
 1. Make a file called `UserPass.js` in the same directory as `WoWDB.js`
 
 	```javascript 
-	var DiscordClient = require('./discord.io.js');
+	var DiscordClient = require('discord.io');
 	var bot = new DiscordClient({
 		token: "<Your bot token>"
 	});
