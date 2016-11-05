@@ -44,6 +44,23 @@ log.on("message_deleted",(p,msgId,channelId,event)=>{
 	id = event.id;
 	p.mysql.query("UPDATE `log_chat` SET `flags`=`flags`+1, `updated`=? WHERE  `messageId`=? AND `channelId`=? LIMIT 1;",[(new Date).getTime(),id,chan]);
 });
+log.on("raw_event",(p,event)=>{
+	p.mysql.query("INSERT INTO `log_event` VALUES(?,?,?);",[(new Date).getTime(),event.t+"",JSON.stringify(event)]);
+});
+log.on("guild_member_add",(p,event)=>{
+	p.mysql.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Join",""]);
+});
+log.on("guild_member_remove",(p,event)=>{
+	p.mysql.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Leave",""]);
+});
+log.on("presence_update",(p,event)=>{
+	if(event.d.game!=null)
+		p.mysql.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Status",event.d.game.name]);
+	if(event.d.user.avatar&&event.d.user.avatar!=null)
+		p.mysql.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Avatar",event.d.user.avatar]);
+	if(event.d.nick!=null)
+		p.mysql.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Nickname",event.d.nick]);
+});
 
 log.commands = {
 	stats: {
