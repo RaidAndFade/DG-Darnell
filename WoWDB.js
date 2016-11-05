@@ -72,7 +72,7 @@ function reloadModule(file){
 		Modules[file].emit("unload",utils,data.persistent.modData[file]);
 		delete require.cache[require.resolve("./Modules/"+file)];
 		delete Modules[file];
-	}catch(e){}
+	}catch(e){console.log(e);}
 }
 function loadModule(file){
 	try{
@@ -86,7 +86,7 @@ function loadModule(file){
 		Modules[file].utils=utils;
 		pad2 = new Array(42-Modules[file].name.length).join(" ");
 		console.log("= LOADED "+Modules[file].name+pad2+"=");
-	}catch(e){}
+	}catch(e){console.log(e);}
 }
 function unloadModule(file){
 	try{
@@ -98,7 +98,7 @@ function unloadModule(file){
 		delete Modules[file];
 		pad2 = new Array(40-file.length).join(" ");
 		console.log("= UNLOADED "+file+pad2+"=");
-	}catch(e){}
+	}catch(e){console.log(e);}
 }
 /******************* MODULE UTILS ******************/
 utils={
@@ -173,6 +173,7 @@ utils={
 				to: event.channel_id,
 				message: msg
 			},function(e,d){
+				console.log(e);
 				data.ownMsgs.push(d.id);
 				data.commandReplies[event.id]=d.id;
 				callback(e,d);
@@ -204,7 +205,7 @@ utils={
 			}
 		});
 	},
-	editMSG:	(chan,id,txt,callback)=>{
+	editMSG:	(chan,id,txt,callback=(e,d)=>{})=>{
 		txt = txt.substr(0,2000);
 		bot.editMessage({
 			channelID: chan, 
@@ -272,12 +273,14 @@ bot.on('message', function(unusable, unusable2, channelId, message, rawEvent) {
 	if(!utils.chanData[channelId].settings.enabled)return;
 	user = rawEvent.d.author;
 	user.tag="<@"+user.id+">";
+	rawEvent.d.cancelled=false;
 	try{rawEvent.d.guild_id=bot.channels[channelId].guild_id;}catch(e){}
 	for(modf in Modules){
 		if(utils.chanData[channelId].ModBlacklist.indexOf(modf)!=-1)continue;
 		try{Modules[modf].emit("message",utils,user,channelId,message,rawEvent.d);}catch(e){}
 	}
-	if(rawEvent.d.id in data.ownMsgs){return;}
+	if(rawEvent.d.id in data.ownMsgs)return;
+	if(rawEvent.d.cancelled)return;
 	init=utils.chanData[channelId].settings.comInit;
 	if((init!=""&&message.startsWith(init))||message.startsWith("<@"+utils.ownId+">")||message.startsWith("<@!"+utils.ownId+">")){
 		if(message.startsWith("<@!"+utils.ownId+">"))message=message.replace("<@!"+utils.ownId+">","<@"+utils.ownId+">");
@@ -320,6 +323,7 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 	messageId=rawEvent.message_id;
 	user=rawEvent.author;
 	message=rawEvent.content;
+	rawEvent.cancelled=false;
 	try{
 	if(!utils.chanData[channelId].settings.enabled)return;
 	try{user.tag="<@"+user.id+">"}catch(e){};
@@ -331,6 +335,7 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 	console.log(message);
 	if(rawEvent.id in data.ownMsgs){return;}
 	if(!message)return;
+	if(rawEvent.cancelled)return;
 	//console.log(message);
 	init=utils.chanData[channelId].settings.comInit;
 	if((init!=""&&message.startsWith(init))||message.startsWith("<@"+utils.ownId+">")||message.startsWith("<@!"+utils.ownId+">")){
@@ -377,9 +382,11 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 bot.on('messageDelete', function(rawEvent){
 	channelId=rawEvent.d.channel_id;
 	messageId=rawEvent.d.id;
+	rawEvent.d.cancelled=false;
 	if(!(channelId in utils.chanData))
 		utils.chanData[channelId]=utils.chanData.def;
 	try{rawEvent.d.guild_id=bot.channels[channelId].guild_id;}catch(e){}
+	try{
 	for(var key in utils.chanData.def){
 		if(!(key in utils.chanData[channelId])){
 			console.log(key);
@@ -390,6 +397,8 @@ bot.on('messageDelete', function(rawEvent){
 	for(modf in Modules){
 		Modules[modf].emit("message_deleted",utils,messageId,channelId,rawEvent.d);
 	}
+	}catch(e){}
+	if(rawEvent.d.cancelled)return;
 	if(rawEvent.d.id in data.commandReplies){utils.delMSG(channelId,data.commandReplies[rawEvent.d.id]);}
 	if(rawEvent.d.id in data.ownMsgs){data.ownMsgs.splice(data.ownMsgs.indexOf(rawEvent.d.id),1);}
 	if(rawEvent.d.id in data.persistent.delQueue)delete data.persistent.delQueue[rawEvent.d.id];
@@ -428,6 +437,10 @@ bot.on('ccreate', function(channel){
 	}
 });
 bot.on('any', function(event){
+	for(modf in Modules){
+		Modules[modf].emit("raw_event",utils,event);
+		Modules[modf].emit((""+event.t).toLowerCase(),utils,event);
+	}
 });
 /**************** TICKING THINGS *****************/
 function tick(){
