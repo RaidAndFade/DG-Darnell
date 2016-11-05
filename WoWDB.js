@@ -437,10 +437,12 @@ bot.on('ccreate', function(channel){
 	}
 });
 bot.on('any', function(event){
-	for(modf in Modules){
-		Modules[modf].emit("raw_event",utils,event);
-		Modules[modf].emit((""+event.t).toLowerCase(),utils,event);
-	}
+	try{
+		for(modf in Modules){
+			Modules[modf].emit("raw_event",utils,event);
+			Modules[modf].emit((""+event.t).toLowerCase(),utils,event);
+		}
+	}catch(e){}
 });
 /**************** TICKING THINGS *****************/
 function tick(){
