@@ -500,12 +500,14 @@ function stop(){
 		unloadModule(modf);
 	}
 	save();
-	if(mysql)mysql.end();
-	for(connection in cons){
-		if(end in connection)connection.end();
-		if(close in connection)connection.close();
-		if(exit in connection)connection.exit();
-	}
+	try{
+		if(mysql)mysql.end();
+		for(connection in cons){
+			if(end in connection)connection.end();
+			if(close in connection)connection.close();
+			if(exit in connection)connection.exit();
+		}
+	}catch(e){}
 	var id = setTimeout(function() {}, 0);
 	while (id--) {
 		clearTimeout(id);
