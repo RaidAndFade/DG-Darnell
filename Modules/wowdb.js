@@ -10,6 +10,16 @@ wh.on("load",(p,data)=>{
 	if(data.persistentVar)persistentVar=data.persistentVar;
 	if(persistentVar.chRealms)channelRealms=persistentVar.chRealms;
 	console.log("WoWDB loaded!");
+	if(!p.cons.wowdb||!p.cons.wowauc){
+		p.disable(wh,"DBs not found. Disabling WoWDB module");
+	}else{
+		p.cons.wowdb.query('SELECT 1', (err, rows) => {
+			if(err)p.disable(wh,"WoW DB database having issues, not going to bother, disabling WoWDB module");
+		});
+		p.cons.wowauc.query('SELECT 1', (err, rows) => {
+			if(err)p.disable(wh,"WoW AUC database having issues, not going to bother, disabling WoWDB module");
+		});
+	}
 });
 wh.on("unload",(p,data)=>{
 	persistentVar.chRealms = channelRealms;

@@ -5,6 +5,12 @@ var https = require("https");
 
 translate.name="Translate";
 
+translate.on("load",(p)=>{
+	if(!p.keys.systran||p.keys.systran==""){
+		p.disable(translate,"DB not found. Disabling Log module");
+	}
+});
+
 translate.commands = {
 	translate: {
 		aliases: [],

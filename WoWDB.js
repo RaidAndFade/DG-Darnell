@@ -40,6 +40,13 @@ function loadModules(){
 	});
 }
 Reloading=[];
+function fileByMod(mod){
+	for(var modf in Modules){
+		var tmod = Modules[modf];
+		if(mod==tmod)return modf;
+	}
+	return null;
+}
 function watchModule(mod){
 	pad = new Array(39-mod.length).join(" ");console.log("= WATCHING: "+mod+pad+"=");
 	fs.watch("./Modules/"+mod,(eventType,filename) => {
@@ -83,7 +90,9 @@ function loadModule(file){
 			Modules[file].emit("load",utils,data.persistent.modData[file]);
 		else 
 			Modules[file].emit("load",utils,{});
-		Modules[file].utils=utils;
+		
+		try{Modules[file].utils=utils;}catch(e){console.log("Failed to load the previous module, check the error");return;}
+		
 		pad2 = new Array(42-Modules[file].name.length).join(" ");
 		console.log("= LOADED "+Modules[file].name+pad2+"=");
 	}catch(e){console.log(e);}
@@ -128,6 +137,10 @@ utils={
 		bool		: combinate.regexp(/(true|false)/i).map((res)=>{return res=="true";})
 	},
 	combinator:	combinate,
+	disable: 	(mod,reason)=>{
+		unloadModule(fileByMod(mod));
+		console.log(mod.name+" Unloaded because:\n\t"+reason+"\n");
+	},
 	sendMSG:	(event,msg,del=[true,30000,false],callback=(e,d)=>{})=>{
 		if(typeof del == "function"){callback = del;del=[true,30000,false];}
 		msg = msg.substr(0,2000); 
@@ -487,7 +500,12 @@ function stop(){
 		unloadModule(modf);
 	}
 	save();
-	mysql.end();
+	if(mysql)mysql.end();
+	for(connection in cons){
+		if(end in connection)connection.end();
+		if(close in connection)connection.close();
+		if(exit in connection)connection.exit();
+	}
 	var id = setTimeout(function() {}, 0);
 	while (id--) {
 		clearTimeout(id);

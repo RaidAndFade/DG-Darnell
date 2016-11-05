@@ -3,10 +3,16 @@ const EventEmitter = require('events');
 class EE extends EventEmitter{}
 const log = new EE();
 log.name="ChatLog";
-log.AlwaysEnabled=true;
 
 log.on("load",(p)=>{
 	console.log("Log loaded!");
+	if(!p.mysql){
+		p.disable(log,"DB not found. Disabling Log module");
+		return;
+	}
+	p.mysql.query('SELECT 1', (err, rows) => {
+		if(err)p.disable(log,"DB having issues, not going to bother, disabling LOG module");
+	});
 });
 
 log.on("message",(p,user,channelId,message,event)=>{
