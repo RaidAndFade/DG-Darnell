@@ -1,13 +1,13 @@
 /**
 TODO--
 
--Migrate server/channel settings to mysql instead of json
-
+- Migrate server/channel settings to mysql instead of json
+- Make a wiki for stuff
 
 */
 
 
-const DiscordClient = require('discord.io');
+const Discord = require('discord.io');
 const bot = require("./UserPass.js").bot;
 const Twitter = require("./UserPass.js").twitter;
 const mysql = require("./UserPass.js").mysql;
@@ -131,9 +131,9 @@ utils={
 		eof			: combinate.eof,
 		word		: combinate.regexp(/\S+/),
 		phrase      : combinate.regexp(/\"(\\.|[^\"])*\"/).map((res)=>{return res.substr(1,res.length-2);}).or(combinate.regexp(/\S+/)),
-		user		: combinate.regexp(/<@!?[0-9]+>/).map((res)=>{return res.replace(/[\@\!\?\<\>]+/g,"");}).map(Number).or(combinate.regexp(/[0-9]+/).map(Number)),
+		user		: combinate.regexp(/<@!?[0-9]+>/).map((res)=>{return res.replace(/[\@\!\?\<\>]+/g,"");}).map(String).or(combinate.regexp(/[0-9]+/).map(String)),
 		channel		: combinate.regexp(/<#[0-9]+>/),
-		snippet		: combinate.regexp(/```(\S+)\n(.*?)\n```/).map((res)=>{var exp = /```(\S+)\n(.*?)\n```/;var reg = exp.exec(res);var lang=reg[1];var code=reg[2];return {lang:lang,code:code};}),
+		snippet		: combinate.regexp(/[`]{3}(\S+)\n((.*\n*)+)\n[`]{3}/).map((res)=>{var exp = /[`]{3}(\S+)\n((.*\n*)+)\n[`]{3}/;var reg = exp.exec(res);var lang=reg[1];var code=reg[2];return {lang:lang,code:code};}),
 		bool		: combinate.regexp(/(true|false)/i).map((res)=>{return res=="true";})
 	},
 	combinator:	combinate,
@@ -228,20 +228,32 @@ utils={
 			callback(e,d);
 		});
 	},
-	delMSG:		(channelID,id)=>{
+	delMSG:		(channelID,id,cb=()=>{})=>{
 		bot.deleteMessage({
 			channelID: channelID,
 			messageID: id
-		});
+		},cb);
 	},
 	pushDEL: 	(channelID,id,del=30000)=>{
 		data.persistent.delQueue[id]=[channelID,id,(new Date).getTime()+del];
 	},
-	pad:	(msg,length,filler=" ")=>{
+	stringifyEmoji: (emoji)=>{
+		if (typeof emoji === 'object') // if (emoji.name && emoji.id)
+			return emoji.name + ':' + emoji.id;
+		if (emoji.indexOf(':') > -1)
+			return emoji;
+		return encodeURIComponent(decodeURIComponent(emoji));
+	},
+	addReaction: (emoji,msg,chan,cb=()=>{})=>{
+		bot.addReaction({channelID:chan,messageID:msg,reaction:emoji},(e,r)=>{cb(e,r)});
+	},
+	pad:	(msg,length,filler=" ",left=false)=>{
 		msg=msg+"";
 		length=length-msg.length;
 		while(length-->0){
-			msg+=filler;
+			if(left)
+				msg = filler+msg;
+			else msg+=filler;
 		}
 		return msg;
 	}
@@ -473,6 +485,13 @@ function msgDelQueue(){
 	//data.persistent.delQueue;
 }
 /****************** CORE UTILS ********************/
+function stringifyEmoji(emoji) {
+	if (typeof emoji === 'object') // if (emoji.name && emoji.id)
+		return emoji.name + ':' + emoji.id;
+	if (emoji.indexOf(':') > -1)
+		return emoji;
+	return encodeURIComponent(decodeURIComponent(emoji));
+}
 function evalUntil(msgId){
 	if(msgQueue.length<=0)return;
 	evalThis = msgQueue.shift();

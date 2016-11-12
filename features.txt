@@ -13,6 +13,8 @@ Some features:
    7: Music Bot!
    8: Minigames like Tic-Tac-Toe!
    9: Execute Code straight from discord!
-  10: And Much Much More!
+  10: Reminders to remind you to do things!
+  11: Timers to say something once per day, per hour, per minute, per year... whatever man!
+  12: And Much Much More!
 ```
 Add me using https://gocode.it/dgd
