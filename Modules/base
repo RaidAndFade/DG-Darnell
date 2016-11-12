@@ -1,19 +1,19 @@
 const EventEmitter = require('events');
 class EE extends EventEmitter{}
 const module = new EE();
-test.name="Testing";
+module.name="My Module";
 
 var persistentVar="";
-test.on("load",(p,data)=>{
+module.on("load",(p,data)=>{
 	if(data.persistentVar)persistentVar=data.persistentVar;
-	console.log("Example loaded!");
+	console.log("Module loaded!");
 });
-test.on("unload",(p,data)=>{
+module.on("unload",(p,data)=>{
 	data.persistentVar=persistentVar;
-	console.log("Example unloaded!");
+	console.log("Module unloaded!");
 });
 
-test.commands = {
+module.commands = {
 	command:{
 		aliases: ["cmd"],
 		allowed: (p,user,args,event,helpReq) => {
@@ -25,4 +25,4 @@ test.commands = {
 		}
 	}
 };
-module.exports=test
+module.exports=module
