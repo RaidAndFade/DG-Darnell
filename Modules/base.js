@@ -351,16 +351,19 @@ base.commands={
 		aliases: [],
 		desc: "Get some info about a user",
 		run: (p,args,user,channel,event) => {
-			if(args[0]=="")user=event.author.id;
-			else user=args[0];
-			console.log(user);
-			user = p.bot.users[user];
+			if(args[0]=="")user=p.bot.users[event.author.id];
+			else{
+				for(var tuser in p.bot.users){
+					if(tuser==args[0])user = p.bot.users[tuser];
+				}
+			}
+			console.log(p.bot.users[args[0]]);
 			var member = "";
 			var roles  = "";
 			var joindate = "";
 			var server = "";
 			if(typeof event.guild_id !== "undefined") server = p.bot.servers[event.guild_id];
-			if(server!="") member = server.members[user.id];
+			if(server!="")member = server.members[user.id];
 			if(member!="")console.log(member);
 			if(member!="")roles = "1";
 			if(member!="")console.log(new Date(member.joined_at));
@@ -380,7 +383,6 @@ base.commands={
 							(member!=""?"\n  Joined: "+(""+new Date(member.joined_at)):"")+
 							(roles!=""?"\n   Roles: "+roles+"":"")+
 							"\n```");
-			//p.reply(event,"In "+Object.keys(p.bot.channels).length+" channels on "+Object.keys(p.bot.servers).length+" servers with "+Object.keys(p.bot.users).length+" users");
 		}
 	},
 	features:{
@@ -424,7 +426,8 @@ base.commands={
 			onlineUsers = 0;
 			for(var userId in server.members){
 				var user = server.members[userId];
-				if(user.status!="offline")onlineUsers++;
+				console.log(user);
+				if(user.status&&user.status!=null&&user.status!="offline")onlineUsers++;
 			}
 			p.reply(event,"```prolog\n"+
 							"\n  Server: "+server.name.replace(/'/g,"").replace(/```/g,"'''")+
