@@ -38,6 +38,7 @@ log.on("message_updated",(p,msgId,user,channelId,message,event)=>{
 	msg = event.content;
 	p.mysql.query("SELECT * FROM `log_chat` WHERE `messageId`=? AND `channelId`=? LIMIT 1;",[id,chan],function(err,res,fs){
 		if(err)throw err;
+		if(res.length<1)return;
 		js = res[0].editmsg;
 		if(js=="")js="[]";
 		msgs=JSON.parse(js);
@@ -104,7 +105,7 @@ log.commands = {
 								p.reply(event,out+"");
 						});
 					}else{
-						p.bot.getMember({serverID:p.bot.channels[chan].guild_id,userID:args[1].replace("<@","").replace(">","")},function(err,res){
+						p.bot.getMember({serverID:p.bot.channels[chan].guild_id,userID:args[1]},function(err,res){
 							if(err){id=event.author.id;}else{id=res.user.id;}//if user doesn't exist return sender.
 							p.mysql.query("SELECT * FROM `log_chat` WHERE `userId`=? AND `channelId`=? AND `flags`%2=1 ORDER BY `date` DESC LIMIT 5;",[id,chan],function(err,res,fs){
 								out="";
@@ -223,7 +224,7 @@ log.commands = {
 							var currow = [];
 							for(var col in row){
 								var val = row[col];
-								if(!(col in columns))columns.push(col);
+								if(columns.indexOf(col)===-1)columns.push(col);
 								currow[col]=val;
 							}
 							rows.push(currow);
