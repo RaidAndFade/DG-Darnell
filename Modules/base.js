@@ -68,7 +68,7 @@ base.commands={
 	mod:{
 		usage:"mod help",
 		allowed: (p,user,args,event,helpReq)=>{
-			return (typeof p.bot.servers[event.guild_id]=="undefined")?user.id == p.owner:(user.id==p.bot.servers[event.guild_id].owner_id || user.id == p.owner);
+			return p.hasPerm(event,user,"GUILD_OWNER");
 		},
 		aliases: ["mods"],
 		parse: utils.combinator.seq(utils.combinate.phrase.or(utils.combinator.of("help")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of(""))),
@@ -159,10 +159,49 @@ base.commands={
 			}
 		}
 	},
+	debug:{
+		usage:"debug <snippet>",
+		allowed: (p,user,args,event,helpReq)=>{
+			return p.hasPerm(event,user,"BOT_OWNER");
+		},
+		parse: utils.combinate.snippet,
+		aliases: [],
+		desc:"",
+		run:(utils,args,user,channel,event)=>{
+			if(args.lang!="js")return utils.reply(event,"*ERROR*: Code must be in javascript!");
+			eval(args.code);
+		}
+	},
+	inviteinfo:{
+		usage:"inviteinfo <invitelink>",
+		allowed: (p,user,args,event,helpReq)=>{
+			return true;
+		},
+		aliases: [],
+		desc:"Get some information about an invite link",
+		run:(utils,args,user,channel,event)=>{
+			args[0] = args[0].match(/<?(?:https?\:\/\/)?discord\.gg\/([a-zA-Z0-9\-]+)>?/)[1];
+			utils.bot.queryInvite(args[0],(err,res)=>{
+				if(err){
+					utils.reply(event,"**ERROR**: " + err.response.message + " (most likely expired link)");
+					return;
+				}
+				utils.reply(event,"```prolog\n"+
+								" Invite : "+res.code+"\n\n"+
+								"  Guild : "+res.guild.name+"\n"+
+								"     Id : "+res.guild.id+"\n"+
+								"   Icon : https://discordapp.com/api/guilds/"+res.guild.id+"/icons/"+res.guild.icon+".jpg\n\n"+
+								"Channel : #"+res.channel.name+"\n"+
+								"Chan Id : "+res.channel.id+"\n"+
+								"  Perm? : "+(args[0].length<6?"80% YES":"80% NO")+
+								"\n```");
+			});
+		}
+	},
 	settings:{
 		usage:"settings help",
 		allowed: (p,user,args,event,helpReq)=>{
-			return (typeof p.bot.servers[event.guild_id]=="undefined")?user.id == p.owner:(user.id==p.bot.servers[event.guild_id].owner_id || user.id == p.owner);
+			return p.hasPerm(event,user,"GUILD_OWNER");
 		},
 		aliases: ["botsettings"],
 		parse: utils.combinator.seq(utils.combinate.phrase.or(utils.combinator.of("help")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of("")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.all.or(utils.combinator.of(""))),
@@ -305,7 +344,7 @@ base.commands={
 	restart: {
 		usage:"",
 		allowed: (p,user,args,event,helpReq)=>{
-			return user.id == p.owner;
+			return p.hasPerm(event,user,"BOT_OWNER");
 		},
 		aliases: [],
 		desc: "Restart the bot",
@@ -317,7 +356,7 @@ base.commands={
 	botinfo: {
 		usage:"",
 		allowed: (p,user,args,event,helpReq)=>{
-			return user.id == p.owner;
+			return p.hasPerm(event,user,"BOT_OWNER");
 		},
 		aliases: [],
 		desc: "Get some info about the bot",
@@ -391,7 +430,7 @@ base.commands={
 		aliases: [],
 		desc: "Lists DGD's main features and gives an invite link",
 		run:  (p,args,user,channel,event) => {
-			if(typeof event.guild_id === "undefined")
+			if(typeof event.guild_id === "undefined")//TODO READ FROM features.txt
 				return p.reply(event,"```prolog\nDeathGuard Darnell to the rescue!\nWoW based bot with tons of features!\nSome features:\n   1: Accessible database of ALL Items in the game!\n   2: Commands to find data about Mounts, Titles, Achievements, and More!\n   3: Find Quest rewards and requirements!\n   3: Quick view of your realms Auction House!\n   4: Advanced Calculator that can have Custom Variables\n        and Convert Units of Measurement!\n   5: Instant access to the Weather of your area!\n   6: Translation command!\n   7: Music Bot!\n   8: Minigames like Tic-Tac-Toe!\n   9: Execute Code straight from discord!\n  10: And Much Much More!\n```\nAdd me to your servers using https://gocode.it/dgd");
 			p.sendTo(event.author.id,"```prolog\nDeathGuard Darnell to the rescue!\nWoW based bot with tons of features!\nSome features:\n   1: Accessible database of ALL Items in the game!\n   2: Commands to find data about Mounts, Titles, Achievements, and More!\n   3: Find Quest rewards and requirements!\n   3: Quick view of your realms Auction House!\n   4: Advanced Calculator that can have Custom Variables\n        and Convert Units of Measurement!\n   5: Instant access to the Weather of your area!\n   6: Translation command!\n   7: Music Bot!\n   8: Minigames like Tic-Tac-Toe!\n   9: Execute Code straight from discord!\n  10: And Much Much More!\n```\nAdd me to your servers using https://gocode.it/dgd");
 			p.reply(event,"Check your DMs!",[true,5000,true]);
@@ -503,7 +542,7 @@ base.commands={
 	setstatus: {
 		usage:"",
 		allowed: (p,user,args,event,helpReq)=>{
-			return user.id == p.owner;
+			return p.hasPerm(event,user,"BOT_OWNER");
 		},
 		aliases: [],
 		desc: "Set the bot's status",
@@ -514,6 +553,20 @@ base.commands={
 				}
 			});
 			p.reply(event,"Bot status set to `"+args.join(" ")+"`");
+		}
+	},
+	ping: {
+		usage:"",
+		allowed: (p,user,args,event,helpReq)=>{
+			return true;
+		},
+		aliases: [],
+		desc: "Set the bot's status",
+		run: (p,args,user,channel,event) => {
+			var recv = new Date().getTime()-new Date((event.id/4194304)+1420070400000).getTime();
+			p.reply(event,"Checking ping",(e,r)=>{
+				p.reply(event,{color:0xffffff,description:"Pong : "+(recv)+"ms\nRound Trip : "+(new Date((r.id/4194304)+1420070400000).getTime()-new Date((event.id/4194304)+1420070400000).getTime())+"ms",title:""},(e,r)=>{if(e)console.log(e);});
+			});
 		}
 	}
 }
