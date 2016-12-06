@@ -31,8 +31,8 @@ test.commands = {
 	persistencytest: {
 		aliases: ["tstpersist"],
 		allowed: (p,user,args,event,helpReq) => {
-			return true;
-		}, 
+			return p.hasPerm(event,user,"BOT_OWNER");
+		},  
 		usage: "persistencytest <new Var>",
 		desc: "This command is a test command",
 		run: (p, args, user, channel, event) => {
@@ -44,7 +44,7 @@ test.commands = {
 	},
 	test: {
 		aliases: [],
-		allowed: ()=>{return true;},
+		allowed: (p,user,args,event,helpReq)=>{return p.hasPerm(event,user,"BOT_OWNER");},
 		usage: "test <return text>",
 		parse: utils.combinate.all,
 		desc: "This command is a test command",
@@ -52,10 +52,22 @@ test.commands = {
 			p.reply(event,"returning : `"+args+"`");
 		}
 	},
+	embedtest: {
+		aliases: [],
+		allowed: (p,user,args,event,helpReq)=>{return p.hasPerm(event,user,"BOT_OWNER");},
+		usage: "test <return text>",
+		parse: utils.combinate.all,
+		desc: "This command is a test command",
+		run: (p,args,user,channel,event)=>{
+			p.reply(event,{title:"Test Embed...",description:"This is a test embed."});
+		}
+	},
 	permissiontest: {
 		aliases: [],
 		allowed: (p, user, args, event, helpReq)=>{
-			if(helpReq)return true;
+			if(helpReq)return p.hasPerm(event,user,"BOT_OWNER");
+			if(p.hasPerm(event,user,"BOT_OWNER"))return;
+			p.sendTo(event.channel_id,"```\n"+JSON.stringify(p.getPerms(event,user)).replace(/,/g,",\n")+"\n```"); 
 			console.log("Checking "+user.username+" if allowed to use PERMISSIONTEST");
 			console.log("~PERMISSIONTEST BEGINS~");
 			setTimeout(p.reply.bind(this,event,"You are "+(user.id==p.owner?"":"not ")+"the owner of this bot..."),0);
@@ -92,7 +104,7 @@ test.commands = {
 	},
 	litaf:{
 		aliases: [],
-		allowed: (p, user, args, event, helpReq)=>{return user.id==p.owner;},
+		allowed: (p, user, args, event, helpReq)=>{return p.hasPerm(event,user,"BOT_OWNER");},
 		usage:"React `lit af` to the latest message",
 		desc:"Do it. Just do it.",
 		run: (p,args,user,channel,event)=>{
@@ -126,7 +138,7 @@ test.commands = {
 	},
 	sotru:{
 		aliases: [],
-		allowed: (p, user, args, event, helpReq)=>{return user.id==p.owner;},
+		allowed: (p, user, args, event, helpReq)=>{return p.hasPerm(event,user,"BOT_OWNER");},
 		usage:"React `so tru` to the latest message",
 		desc:"Do it. Just do it.",
 		run: (p,args,user,channel,event)=>{
