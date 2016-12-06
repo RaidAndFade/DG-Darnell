@@ -59,10 +59,8 @@ rpg.on("unload",(p,data)=>{
 	console.log("RPG Mod unloaded!");
 });
 rpg.on("message",(p,user,channelId,message,event)=>{
-	console.log("-2:"+event);
 	if(!(channelId in playing))return;
 	if(playing[channelId].indexOf(user.id)===-1)return;
-	console.log("-1:"+user);
 	try{
 		init=utils.chanData[channelId].settings.comInit;
 		console.log("0:"+init);
@@ -159,7 +157,7 @@ rpg.commands = {
 	rstats:{
 		aliases: [],
 		allowed: (p,user,args,event,helpReq) => {
-			return true;
+			return p.hasPerm(event,user,"BOT_OWNER");//TODO finish RSTATS
 		}, 
 		usage: "rstats",
 		desc: "Get your RPG stats!",
@@ -170,7 +168,7 @@ rpg.commands = {
 	rpg:{
 		aliases: [],
 		allowed: (p,user,args,event,helpReq) => {
-			return true;
+			return p.hasPerm(event,user,"BOT_OWNER");//TODO finish RPG
 		}, 
 		usage: "rpg",
 		desc: "Start/Stop your adventure!",
