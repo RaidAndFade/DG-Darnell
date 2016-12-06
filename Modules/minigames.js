@@ -63,7 +63,7 @@ minigames.commands = {
 	tictactoe:{
 		aliases: ["ttt","gttt","tttgame"],
 		allowed: (p,user,args,event,helpReq) => {
-			return true;
+			return p.hasPerm(event,user,"BOT_OWNER");//TODO finish TTT
 		}, 
 		usage: "ttt help",
 		desc: "Play Tic-Tac-Toe against a bot or with a friend!",
