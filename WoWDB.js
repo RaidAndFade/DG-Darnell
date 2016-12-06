@@ -5,8 +5,6 @@ TODO--
 - Make a wiki for stuff
 
 */
-
-
 const Discord = require('discord.io');
 const bot = require("./UserPass.js").bot;
 const Twitter = require("./UserPass.js").twitter;
@@ -20,9 +18,17 @@ const request = require('request');
 const querystring = require('querystring');
 const fp = require('path');
 const reload = require('require-reload')(require);
+
+const spamPrevent = 2;//Seconds before a command. Less than this and the previous response is edited.
+const timeoutForCommand = 0.5;//Seconds between commands. Less than this and command is ignored.
+const spamWarnInterval = 30;//Seconds between spam warnings.
+
+//Structure = userId:{event,time};
+lastCommand = {};
+
 data={persistent:{errors:[],delQueue:{},modData:{}},ownMsgs:[],commandReplies:{}};
 chanData={};
-chanData.def={ModBlacklist:[],blockedUsers:[],settings:{comInit:"!",enabled:true,autoDelete:true}};
+chanData.def={ModBlacklist:[],blockedUsers:[],settings:{comInit:";",enabled:true,autoDelete:true}};
 /******************* MODULE MANAGERS ******************/
 Modules=[];
 function loadModules(){
@@ -131,7 +137,7 @@ utils={
 		eof			: combinate.eof,
 		word		: combinate.regexp(/\S+/),
 		phrase      : combinate.regexp(/\"(\\.|[^\"])*\"/).map((res)=>{return res.substr(1,res.length-2);}).or(combinate.regexp(/\S+/)),
-		user		: combinate.regexp(/<@!?[0-9]+>/).map((res)=>{return res.replace(/[\@\!\?\<\>]+/g,"");}).map(String).or(combinate.regexp(/[0-9]+/).map(String)),
+		user		: combinate.regexp(/<@&?!?[0-9]+>/).map((res)=>{return res.replace(/[\@\!\&\?\<\>]+/g,"");}).map(String).or(combinate.regexp(/[0-9]+/).map(String)),
 		channel		: combinate.regexp(/<#[0-9]+>/),
 		snippet		: combinate.regexp(/[`]{3}(\S+)\n((.*\n*)+)\n[`]{3}/).map((res)=>{var exp = /[`]{3}(\S+)\n((.*\n*)+)\n[`]{3}/;var reg = exp.exec(res);var lang=reg[1];var code=reg[2];return {lang:lang,code:code};}),
 		bool		: combinate.regexp(/(true|false)/i).map((res)=>{return res=="true";})
@@ -141,12 +147,74 @@ utils={
 		unloadModule(fileByMod(mod));
 		console.log(mod.name+" Unloaded because:\n\t"+reason+"\n");
 	},
-	sendMSG:	(event,msg,del=[true,30000,false],callback=(e,d)=>{})=>{
+	getPerms: (event,user)=>{
+		if(event.channel_id!=user.id){
+			var servUser=bot.servers[bot.channels[event.channel_id].guild_id].members[user.id];
+			var userPermissions=0;
+			for(role of servUser.roles){
+				userPermissions=userPermissions|bot.servers[bot.channels[event.channel_id].guild_id].roles[role]._permissions;
+			}
+			userPermissions=userPermissions|bot.servers[bot.channels[event.channel_id].guild_id].roles[bot.channels[event.channel_id].guild_id]._permissions;
+			userPermissions = parseInt(userPermissions);
+			var isGOwner = user.id == bot.servers[bot.channels[event.channel_id].guild_id].owner_id;
+		}else{
+			var userPermissions=0;
+			var isGOwner = true;
+		}
+		var perms = {};
+		var isOwner = user.id == owner;
+		perms["ADMINISTRATOR"] 			= (userPermissions&0x00000008)==0x00000008 || isOwner || isGOwner;
+		perms["CREATE_INSTANT_INVITE"] 	= (userPermissions&0x00000001)==0x00000001 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["KICK_MEMBERS"]			= (userPermissions&0x00000002)==0x00000002 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["BAN_MEMBERS"]			= (userPermissions&0x00000004)==0x00000004 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["MANAGE_CHANNELS"] 		= (userPermissions&0x00000010)==0x00000010 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["MANAGE_GUILD"] 			= (userPermissions&0x00000020)==0x00000020 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["ADD_REACTIONS"] 			= (userPermissions&0x00000040)==0x00000040 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["READ_MESSAGES"] 			= (userPermissions&0x00000400)==0x00000400 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["SEND_MESSAGES"] 			= (userPermissions&0x00000800)==0x00000800 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["SEND_TTS_MESSAGES"] 		= (userPermissions&0x00001000)==0x00001000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["MANAGE_MESSAGES"] 		= (userPermissions&0x00002000)==0x00002000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["EMBED_LINKS"] 			= (userPermissions&0x00004000)==0x00004000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["ATTACH_FILES"] 			= (userPermissions&0x00008000)==0x00008000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["READ_MESSAGE_HISTORY"]	= (userPermissions&0x00010000)==0x00010000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["MENTION_EVERYONE"]		= (userPermissions&0x00020000)==0x00020000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["USE_EXTERNAL_EMOJIS"]	= (userPermissions&0x00040000)==0x00040000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["CONNECT"]				= (userPermissions&0x00100000)==0x00100000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["SPEAK"]					= (userPermissions&0x00200000)==0x00200000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["MUTE_MEMBERS"]			= (userPermissions&0x00400000)==0x00400000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["DEAFEN_MEMBERS"]			= (userPermissions&0x00800000)==0x00800000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["MOVE_MEMBERS"]			= (userPermissions&0x01000000)==0x01000000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["USE_VAD"]				= (userPermissions&0x02000000)==0x02000000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["CHANGE_NICKNAME"]		= (userPermissions&0x04000000)==0x04000000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["MANAGE_NICKNAMES"]		= (userPermissions&0x08000000)==0x08000000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["MANAGE_ROLES"]			= (userPermissions&0x10000000)==0x10000000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["MANAGE_WEBHOOKS"]		= (userPermissions&0x20000000)==0x20000000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["MANAGE_EMOJIS"]			= (userPermissions&0x40000000)==0x40000000 || isOwner || isGOwner || perms["ADMINISTRATOR"];
+		perms["GUILD_OWNER"]			= isGOwner || isOwner;
+		perms["BOT_OWNER"] 				= isOwner;
+		return perms;
+	},
+	hasPerm: (event,user,perm)=>{
+		var perms = utils.getPerms(event,user);
+		if(Object.keys(perms).indexOf(perm)===-1)return -1;
+		return perms[perm];
+	},
+	sendMSG:	(event,msg,del=[true,30000,false],callback=(e,d)=>{},attachments=[])=>{
 		if(typeof del == "function"){callback = del;del=[true,30000,false];}
-		msg = msg.substr(0,2000); 
+		var embed = {}
+		if(Array.isArray(msg)){
+			msg = msg[0];
+			embed = msg[1];
+		}
+		if(typeof msg == "Object"&&!Array.isArray(msg)){
+			embed = msg.embed;
+		}
+		msg = msg.substr(0,2000);
 		bot.sendMessage({
 			to: event.channel_id,
-			message: msg
+			message: msg,
+			embed: embed,
+			attachments: attachments
 		},function(e,d){
 			data.ownMsgs.push(d.id);
 			callback(e,d);
@@ -155,12 +223,22 @@ utils={
 			}
 		});
 	},
-	sendTo:	(to,msg,del=[true,30000,false],callback=(e,d)=>{})=>{
+	sendTo:	(to,msg,del=[true,30000,false],callback=(e,d)=>{},attachments=[])=>{
 		if(typeof del == "function"){callback = del;del=[true,30000,false];}
-		msg = msg.substr(0,2000); 
+		var embed = {}
+		if(Array.isArray(msg)){
+			msg = msg[0];
+			embed = msg[1];
+		}
+		if(typeof msg == "Object"&&!Array.isArray(msg)){
+			embed = msg.embed;
+		}
+		msg = msg.substr(0,2000);
 		bot.sendMessage({
 			to: to,
-			message: msg
+			message: msg,
+			embed: embed,
+			attachments: attachments
 		},function(e,d){
 			if(e)return console.log({Err:e,Args:{c:to,m:msg}});
 			data.ownMsgs.push(d.id);
@@ -169,10 +247,24 @@ utils={
 				if(utils.chanData[to].autoDelete||del[2])data.persistent.delQueue[event.id]=[to,d.id,(new Date).getTime()+del[1]];
 			}
 		});
-	},	
-	reply:	(event,msg,del=[true,30000,false],shouldEdit=true,callback=(e,d)=>{})=>{
+	},
+	reply:	(event,msg,del=[true,30000,false],shouldEdit=true,callback=(e,d)=>{},attachments=[])=>{
 		if(typeof del == "function"){callback = del;del=[true,30000,false];}
-		msg = msg.substr(0,2000);
+		var nmsg = "";
+		var embed = {}
+		if(Array.isArray(msg)){
+			console.log("Has message & embed");
+			nmsg = msg[0];
+			nmsg = nmsg.substr(0,2000);
+			embed = msg[1];
+		}else if((typeof msg == "object")&&!Array.isArray(msg)){
+			console.log("Msg IS embed");
+			embed = msg;
+			nmsg = "";
+		}else{
+			console.log("Normal Message");
+			nmsg = msg.substr(0,2000);
+		}
 		edit=false;
 		for(repk in data.commandReplies){
 			rep = data.commandReplies[repk];
@@ -180,15 +272,19 @@ utils={
 			if(repk==event.id){edit=rep;break;}
 		}
 		if(edit&&shouldEdit){
-			utils.editReply(event,msg,callback);
+			utils.editReply(event,msg,del,callback,attachments);
 		}else{
 			bot.sendMessage({
 				to: event.channel_id,
-				message: msg
+				message: nmsg,
+				embed: embed,
+				attachments: attachments
 			},function(e,d){
 				console.log(e);
 				data.ownMsgs.push(d.id);
 				data.commandReplies[event.id]=d.id;
+				lastCommand[event.author.id] = {time:new Date().getTime(),id:d.id};
+				console.log(lastCommand);
 				callback(e,d);
 				if(del[0]){
 					if(utils.chanData[event.channel_id].autoDelete||del[2])data.persistent.delQueue[event.id]=[event.channel_id,event.id,(new Date).getTime()+del[1]];
@@ -197,9 +293,22 @@ utils={
 			});
 		}
 	},
-	editReply:  (event,msg,del=[true,30000],callback=(e,d)=>{})=>{
+	editReply:  (event,msg,del=[true,30000],callback=(e,d)=>{},attachments=[])=>{
 		if(typeof del == "function"){callback = del;del=[true,30000];}
-		msg = msg.substr(0,2000);
+		var embed = {}
+		if(Array.isArray(msg)){
+			console.log("Has message & embed");
+			msg = msg[0];
+			msg = msg.substr(0,2000);
+			embed = msg[1];
+		}else if((typeof msg == "object")&&!Array.isArray(msg)){
+			console.log("Msg IS embed");
+			embed = msg;
+			msg = "";
+		}else{
+			console.log("Normal Message");
+			msg = msg.substr(0,2000);
+		}
 		for(repk in data.commandReplies){
 			rep = data.commandReplies[repk];
 			console.log(repk+" E= "+rep+" E= "+event.id);
@@ -207,10 +316,13 @@ utils={
 		}
 		chan=event.channel_id;
 		bot.editMessage({
-			channelID: chan, 
+			channelID: chan,
 			messageID: edit,
-			message: msg
+			message: msg,
+			embed: embed,
+			attachments: attachments
 		},(e,d)=>{
+			if(e)return console.log(e);
 			callback(e,d);
 			if(del[0]){
 				if(utils.chanData[event.channel_id].autoDelete)data.persistent.delQueue[event.id]=[event.channel_id,event.id,(new Date).getTime()+del[1]];
@@ -221,7 +333,7 @@ utils={
 	editMSG:	(chan,id,txt,callback=(e,d)=>{})=>{
 		txt = txt.substr(0,2000);
 		bot.editMessage({
-			channelID: chan, 
+			channelID: chan,
 			messageID: id,
 			message: txt
 		},(e,d)=>{
@@ -256,6 +368,23 @@ utils={
 			else msg+=filler;
 		}
 		return msg;
+	},
+	sendToOwner: (msg,callback=(e,d)=>{})=>{
+		var embed = {}
+		if(Array.isArray(msg)){
+			msg = msg[0];
+			embed = msg[1];
+		}
+		if(typeof msg == "Object"&&!Array.isArray(msg)){
+			embed = msg.embed;
+		}
+		
+		msg = msg.substr(0,2000); 
+		bot.sendMessage({
+			to: owner,
+			message: msg,
+			embed: embed
+		});
 	}
 }
 utils.chanDataDesc=	{comInit:["The text before a command. Set to empty if you want to call it using user tag.",utils.combinate.phrase],enabled:["Whether the bot is enabled in this channel or not",utils.combinate.bool],autoDelete:["Should the bot auto-delete commands and responses after 30 seconds?",utils.combinate.bool]};
@@ -308,6 +437,26 @@ bot.on('message', function(unusable, unusable2, channelId, message, rawEvent) {
 	if(rawEvent.d.cancelled)return;
 	init=utils.chanData[channelId].settings.comInit;
 	if((init!=""&&message.startsWith(init))||message.startsWith("<@"+utils.ownId+">")||message.startsWith("<@!"+utils.ownId+">")){
+		var isAbove = (typeof utils.bot.servers[rawEvent.d.guild_id]=="undefined")?user.id == utils.owner:(user.id==utils.bot.servers[rawEvent.d.guild_id].owner_id || user.id == utils.owner);
+		if(Object.keys(lastCommand).indexOf(user.id)>-1){
+			console.log(new Date().getTime());
+			console.log(lastCommand[user.id].time);
+			console.log(new Date().getTime()-lastCommand[user.id].time);
+			console.log(lastCommand[user.id]);
+			if(new Date().getTime()-lastCommand[user.id].time<spamPrevent*1000){
+				data.commandReplies[rawEvent.d.id]=lastCommand[user.id].id;
+			}
+			if(new Date().getTime()-lastCommand[user.id].time<timeoutForCommand*1000){
+				if(Object.keys(lastCommand[user.id]).indexOf("warn")===-1){
+					lastCommand[user.id].warn = new Date().getTime();
+					utils.sendTo(user.id,"Slow down there buddy! You're going a bit over the speed limit!");//TODO make this get from a random list of warnings for the lulz
+				}else if(new Date().getTime()-lastCommand[user.id].warn>spamWarnInterval*1000){
+					lastCommand[user.id].warn = new Date().getTime();
+					utils.sendTo(user.id,"Slow down there buddy! You're going a bit over the speed limit!");
+				}
+				return;
+			}
+		}
 		if(message.startsWith("<@!"+utils.ownId+">"))message=message.replace("<@!"+utils.ownId+">","<@"+utils.ownId+">");
 		comd = message.substr((init!=""&&message.startsWith(init))?init.length:("<@"+utils.ownId+">").length).trim().split(" ")[0].toLowerCase();
 		args = message.substr((init!=""&&message.startsWith(init))?init.length:("<@"+utils.ownId+">").length).trim().split(" ");args.shift();
@@ -364,6 +513,25 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 	//console.log(message);
 	init=utils.chanData[channelId].settings.comInit;
 	if((init!=""&&message.startsWith(init))||message.startsWith("<@"+utils.ownId+">")||message.startsWith("<@!"+utils.ownId+">")){
+		if(Object.keys(lastCommand).indexOf(user.id)>-1){
+			console.log(new Date().getTime());
+			console.log(lastCommand[user.id].time);
+			console.log(new Date().getTime()-lastCommand[user.id].time);
+			console.log(lastCommand[user.id]);
+			if(new Date().getTime()-lastCommand[user.id].time<spamPrevent*1000){
+				data.commandReplies[rawEvent.d.id]=lastCommand[user.id].id;
+			}
+			if(new Date().getTime()-lastCommand[user.id].time<timeoutForCommand*1000){
+				if(Object.keys(lastCommand[user.id]).indexOf("warn")===-1){
+					lastCommand[user.id].warn = new Date().getTime();
+					utils.sendTo(user.id,"Slow down there buddy! You're going a bit over the speed limit!");//TODO make this get from a random list of warnings for the lulz
+				}else if(new Date().getTime()-lastCommand[user.id].warn>spamWarnInterval*1000){
+					lastCommand[user.id].warn = new Date().getTime();
+					utils.sendTo(user.id,"Slow down there buddy! You're going a bit over the speed limit!");
+				}
+				return;
+			}
+		}
 		//if(data.commandReplies[rawEvent.d.id]){utils.delMSG(channelId,data.commandReplies[rawEvent.d.id]);console.log("Deleted "+data.commandReplies[rawEvent.d.id]+"!");}
 		if(message.startsWith("<@!"+utils.ownId+">"))message.replace("<@!"+utils.ownId+">","<@"+utils.ownId+">");
 		comd = message.substr((init!=""&&message.startsWith(init))?init.length:("<@"+utils.ownId+">").length).trim().split(" ")[0].toLowerCase();
@@ -467,7 +635,7 @@ bot.on('any', function(event){
 			Modules[modf].emit("raw_event",utils,event);
 			Modules[modf].emit((""+event.t).toLowerCase(),utils,event);
 		}
-	}catch(e){}
+	}catch(e){console.log(e);}
 });
 /**************** TICKING THINGS *****************/
 function tick(){
@@ -548,9 +716,15 @@ utils.restart=()=>{
 	var id = setTimeout(function() {}, 0);
 	while (id--) {
 		clearTimeout(id);
+		console.log("Cleared time "+id);
+	}
+	var id = setInterval(function() {}, 5000);
+	while (id--) {
+		clearInterval(id);
+		console.log("Cleared int "+id);
 	}
 	try{bot.disconnect();}catch(e){}
-	setTimeout(start,2000);
+	setTimeout(start,1000);
 };
 function save(){
 	data.persistent.chanData=utils.chanData;
