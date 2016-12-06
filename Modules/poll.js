@@ -26,7 +26,7 @@ pollMod.commands = {
 	newpoll:{
 		aliases: ["startvote"],
 		allowed: (p,user,args,event,helpReq) => {
-			return true;
+			return p.hasPerm(event,user,"MANAGE_MESSAGES");
 		}, 
 		parse: utils.combinator.seq(utils.combinate.phrase,utils.combinate.space.or(utils.combinator.of("")),utils.combinator.seq(utils.combinate.phrase,utils.combinate.space.or(utils.combinator.of(""))).many()),
 		usage: "startvote <question> <option1> <option2> <optionN>",
@@ -81,7 +81,7 @@ pollMod.commands = {
 	endpoll:{
 		aliases: ["endvote","stopvote"],
 		allowed: (p,user,args,event,helpReq) => {
-			return true;
+			return p.hasPerm(event,user,"MANAGE_MESSAGES");
 		}, 
 		usage: "endvote",
 		desc: "End a running vote!",
