@@ -225,7 +225,7 @@ dj.commands = {
 	dj: {
 		aliases: ["music"],
 		allowed: (p,user,args,event,helpReq) => {
-			return true;
+			return p.hasPerm(event,user,"BOT_OWNER");//TODO finish DJ and release.
 		},
 		usage: "dj help",
 		desc: "Music bot ~ Plays youtube videos",
