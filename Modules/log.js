@@ -22,59 +22,64 @@ log.on("message",(p,user,channelId,message,event)=>{
 	msg = event.content;
 	usr = event.author.id;
 	if(srv==-1){ 
-		p.mysql.query('INSERT INTO `log_chat`(messageId,userId,channelID,origmsg,editmsg,date) VALUES(?,?,?,?,"[]",?)',[id,usr,chan,msg,(new Date).getTime()],function(err,res,fs){
-			if(err)throw err;
-		});
+		p.mysql.getConnection((e,c)=>{c.query('INSERT INTO `log_chat`(messageId,userId,channelID,origmsg,editmsg,date,embeds,attachments) VALUES(?,?,?,?,"[]",?,?,?)',[id,usr,chan,msg,(new Date).getTime(),JSON.stringify([event.embeds]),JSON.stringify([event.attachments])],(e,r,f)=>{c.release();});},(e,r)=>{});
 	}else{
-		p.mysql.query('INSERT INTO `log_chat`(messageId,userId,channelId,serverId,origmsg,editmsg,date) VALUES(?,?,?,?,?,"[]",?)',[id,usr,chan,srv,msg,(new Date).getTime()],function(err,res,fs){
-			if(err)throw err;
-		});
+		p.mysql.getConnection((e,c)=>{c.query('INSERT INTO `log_chat`(messageId,userId,channelId,serverId,origmsg,editmsg,date,embeds,attachments) VALUES(?,?,?,?,?,"[]",?,?,?)',[id,usr,chan,srv,msg,(new Date).getTime(),JSON.stringify([event.embeds]),JSON.stringify([event.attachments])],(e,r,f)=>{c.release();});},(e,r)=>{});
 	}
 });
 log.on("message_updated",(p,msgId,user,channelId,message,event)=>{
-	if(!event.content)return;
+	if(Object.keys(event).indexOf("nonce")===-1)return;
 	chan = event.channel_id;
 	id = event.id;
 	msg = event.content;
-	p.mysql.query("SELECT * FROM `log_chat` WHERE `messageId`=? AND `channelId`=? LIMIT 1;",[id,chan],function(err,res,fs){
-		if(err)throw err;
+	console.log(event);
+	p.mysql.getConnection((e,c)=>{c.query("SELECT * FROM `log_chat` WHERE `messageId`=? AND `channelId`=? LIMIT 1;",[id,chan],function(err,res,fs){
+		if(err)return console.log(err);
 		if(res.length<1)return;
-		js = res[0].editmsg;
-		if(js=="")js="[]";
-		msgs=JSON.parse(js);
+		edits = res[0].editmsg;
+		if(edits=="")edits="[]";
+		msgs=JSON.parse(edits);
 		msgs.push(msg);
-		p.mysql.query("UPDATE `log_chat` SET `editmsg`=?, `flags`=`flags`+2, `updated`=? WHERE  `messageId`=? AND `channelId`=? LIMIT 1;",[JSON.stringify(msgs),(new Date).getTime(),id,chan]);
-	});
+		
+		embeds = JSON.parse(res[0].embeds);
+		embeds.push(event.embeds);
+		embeds = JSON.stringify(embeds);
+		
+		attachments = JSON.parse(res[0].attachments);
+		attachments.push(event.attachments);
+		attachments = JSON.stringify(attachments);
+		
+		c.query("UPDATE `log_chat` SET `editmsg`=?, `embeds`=?, `attachments`=?, `flags`=`flags`+2, `updated`=? WHERE  `messageId`=? AND `channelId`=? LIMIT 1;",[JSON.stringify(msgs),embeds,attachments,(new Date).getTime(),id,chan],(e,r)=>{c.release();});
+	})},(e,r)=>{});
 });
 log.on("message_deleted",(p,msgId,channelId,event)=>{
 	chan = event.channel_id;
 	id = event.id;
-	p.mysql.query("UPDATE `log_chat` SET `flags`=`flags`+1, `updated`=? WHERE  `messageId`=? AND `channelId`=? LIMIT 1;",[(new Date).getTime(),id,chan]);
+	p.mysql.getConnection((e,c)=>{c.query("UPDATE `log_chat` SET `flags`=`flags`+1, `updated`=? WHERE  `messageId`=? AND `channelId`=? LIMIT 1;",[(new Date).getTime(),id,chan],(e,r)=>{c.release();});},(e,r)=>{});
 });
 log.on("raw_event",(p,event)=>{
-	p.mysql.query("INSERT INTO `log_event` VALUES(?,?,?);",[(new Date).getTime(),event.t+"",JSON.stringify(event)]);
+	//p.mysql.query("INSERT INTO `log_event` VALUES(?,?,?);",[(new Date).getTime(),event.t+"",JSON.stringify(event)],(e,r)=>{});
 });
 log.on("guild_member_add",(p,event)=>{
-	p.mysql.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Join",""]);
+	p.mysql.getConnection((e,c)=>{c.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Join",""],(e,r)=>{c.release();});},(e,r)=>{});
 });
 log.on("guild_member_remove",(p,event)=>{
-	p.mysql.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Leave",""]);
+	p.mysql.getConnection((e,c)=>{c.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Leave",""],(e,r)=>{c.release();});},(e,r)=>{});
 });
 log.on("presence_update",(p,event)=>{
 	if(event.d.game!=null)
-		p.mysql.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Status",event.d.game.name]);
+		p.mysql.getConnection((e,c)=>{c.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Status",event.d.game.name],(e,r)=>{c.release();});},(e,r)=>{});
 	if(event.d.user.avatar&&event.d.user.avatar!=null)
-		p.mysql.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Avatar",event.d.user.avatar]);
+		p.mysql.getConnection((e,c)=>{c.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Avatar",event.d.user.avatar],(e,r)=>{c.release();});},(e,r)=>{});
 	if(event.d.nick!=null)
-		p.mysql.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Nickname",event.d.nick]);
+		p.mysql.getConnection((e,c)=>{c.query("INSERT INTO `log_users` VALUES(?,?,?,?,?);",[event.d.user.id,event.d.guild_id,(new Date).getTime(),"Nickname",event.d.nick],(e,r)=>{c.release();});},(e,r)=>{});
 });
 
 log.commands = {
 	stats: {
 		parse: utils.combinator.seq(utils.combinate.word.or(utils.combinate.user.or(utils.combinator.of("help"))),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.user.or(utils.combinator.of(""))),	
 		allowed: (p,user,args,event,helpReq) => {
-			console.log(user);
-			return (typeof p.bot.servers[event.guild_id]=="undefined")?user.id == p.owner:(user.id==p.bot.servers[event.guild_id].owner_id || user.id == p.owner);
+			return p.hasPerm(event,user,"MANAGE_MESSAGES");
 		},
 		aliases: ["stat"],
 		usage: "stats",
@@ -187,8 +192,7 @@ log.commands = {
 	log: {
 		parse: utils.combinator.seq(utils.combinate.word.or(utils.combinate.user.or(utils.combinator.of("help"))),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.snippet.or(utils.combinate.phrase.or(utils.combinator.all.or(utils.combinator.of(""))))),	
 		allowed: (p,user,args,event,helpReq) => {
-			if(!helpReq)console.log(user);
-			return p.owner==user.id;
+			return true;
 		},
 		aliases: [],
 		usage: "log",
@@ -203,12 +207,33 @@ log.commands = {
 				default:
 				case "help":
 					p.reply(event,"**Subcommands**:\n```\n"
-								+"\nlog unsafe \"snippet\" : Execute an sql query"
-								+"\nlog search \"text\" : Search for text in someone's message"
-								+"\nlog get <message id> : Returns the text of a message Id"
+								+(p.hasPerm(event,user,"BOT_OWNER")?"\nlog unsafe \"snippet\" : Execute an sql query":"")
+								+(p.hasPerm(event,user,"MANAGE_MESSAGES")?"\nlog search \"text\"    : Search for text in someone's message":"")
+								+("\nlog get <message id> : Quote a message by it's id")
 								+"```");
 					break;
+				case "get":
+					p.mysql.getConnection(((event,e,c)=>{
+						if(e)return console.log(e);
+						c.query("SELECT * FROM `log_chat` WHERE `messageId` = ? LIMIT 1;",[args[0]],(function(event,err,res,fs){
+							if(err)return console.log(err);
+							console.log(res);
+							res = res[0];
+							p.bot.getUser({userID:res.userId},((event,e,r)=>{
+								if(e)return console.log(e);
+								var author = r;
+								console.log(author);
+								var authorAvatar = "https://discordapp.com/api/users/"+author.id+"/avatars/"+author.avatar+".jpg";
+								var emb = {author:{name:author.username+"#"+author.discriminator,icon_url:authorAvatar},footer:{text:"Message Id : "+res.messageId},type:"rich",timestamp:new Date(res.date),color:parseInt("00ffff",16),description:"\t"+res.origmsg};
+								console.log(emb); 
+								p.reply(event,emb);
+								c.release();
+							}).bind(this,event));
+						}).bind(this,event));
+					}).bind(this,event));
+					break;
 				case "unsafe":
+					if(!p.hasPerm(event,user,"BOT_OWNER"))return;
 					if(!(args[0] instanceof Object)||args[0].lang!="sql")return p.reply(event,"Make sure you are using a snippet, and that the snippet is in SQL");
 					args[0].code=(""+args[0].code).replace(/\$\{this\.channel\}/g,channel);
 					if(event.guild_id)args[0].code=(""+args[0].code).replace(/\$\{this\.guild\}/g,event.guild_id);
