@@ -675,7 +675,7 @@ wh.commands = {
 	},
 	wddebug: {
 		allowed: (p,user,args,event,helpReq)=>{
-			return user.id == p.owner;
+			return p.hasPerm(event,user,"BOT_OWNER");;
 		},
 		parse: utils.combinator.seq(utils.combinate.word.or(utils.combinator.of("help")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinate.all)),
 		usage: "debug help",
