@@ -94,7 +94,7 @@ timer.commands = {
 	timer:{
 		aliases: [],
 		allowed: (p,user,args,event,helpReq) => {
-			return true;
+			return p.hasPerm(event,user,"MANAGE_MESSAGES");
 		}, 
 		parse: utils.combinator.seq(utils.combinate.phrase.or(utils.combinator.of("help")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of("")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of("")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of(""))),
 		usage: "timer help",
