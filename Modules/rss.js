@@ -95,7 +95,7 @@ rss.on("tick",(p)=>{
 			feedcount.splice(fid,1);
 		}
 	}
-	if(nextCheck - new Date().getTime()>0 || feeds.length<1)return console.log(nextCheck - new Date().getTime());
+	if(nextCheck - new Date().getTime()>0 || feeds.length<1)return;
 	nextCheck = new Date().getTime()+interval;
 	for(var fid in feeds){
 		var feed = feeds[fid];
