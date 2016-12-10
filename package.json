@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/memanlolz/DG-Darnell#readme",
   "dependencies": {
+    "bignum": "^0.12.5",
     "child_process": "^1.0.2",
     "discord.io": "^2.2.4",
     "events": "^1.1.1",
