@@ -19,7 +19,7 @@ base.commands={
 		allowed: (p,user,args,event,helpReq) => {
 			return true;
 		},
-		desc:"Shows help page for all commands.",  
+		desc:"Shows help page for all commands.",
 		run:(utils,args,user,channel,event)=>{
 			help = [];
 			sinit = utils.chanData[event.channel_id].settings.comInit;
@@ -27,7 +27,7 @@ base.commands={
 			if(mod!='undefined')args.shift();
 			//if(utils.modExists(mod))utils.reply(event,user.tag+"That module does not exist!\n Use **"+sinit+"mod list** to see a list of all mods\n Use **"+sinit+"help <page>** to see all help")
 			page=args.length>0?!isNaN(args[0])?parseInt(args[0])-1:0:0;
-			for(modk in utils.mods){ 
+			for(modk in utils.mods){
 				//if()
 				for(comk in utils.mods[modk].commands){
 					if("allowed" in utils.mods[modk].commands[comk] && utils.mods[modk].commands[comk].allowed(utils,user,[],event,true)==false)continue;
@@ -39,10 +39,10 @@ base.commands={
 					helpstr+="\n";
 					help.push(helpstr);
 				}
-			} 
+			}
 			helpstr = help.join("\n");
 			help=[];
-			pagelen=300; 
+			pagelen=300;
 			if(helpstr.length>pagelen){
 				console.log(helpstr.length>pagelen);
 				while(helpstr.length>pagelen){
@@ -447,7 +447,7 @@ base.commands={
 			if(typeof event.guild_id === "undefined"&&args.length<1)return p.reply(event,"Might want to use that command in a server...");
 			//console.log(p.bot.servers[args[0]]);
 			if(args.length>=1&&(args[0] in p.bot.servers||typeof p.bot.servers[args[0]]!='undefined'||p.bot.servers[args[0]]!=null)){
-				server = p.bot.servers[args[0]];			
+				server = p.bot.servers[args[0]];
 			}else{
 				if(typeof event.guild_id === "undefined")return p.reply(event,"I don't recognize that server, sorry.");
 				server = p.bot.servers[event.guild_id];
@@ -563,9 +563,15 @@ base.commands={
 		aliases: [],
 		desc: "Set the bot's status",
 		run: (p,args,user,channel,event) => {
-			var recv = new Date().getTime()-new Date((event.id/4194304)+1420070400000).getTime();
+			var now = Date.now();
+			var recv = now-(new Date((event.id/4194304)+1420070400000).getTime())-13500;
 			p.reply(event,"Checking ping",(e,r)=>{
-				p.reply(event,{color:0xffffff,description:"Pong : "+(recv)+"ms\nRound Trip : "+(new Date((r.id/4194304)+1420070400000).getTime()-new Date((event.id/4194304)+1420070400000).getTime())+"ms",title:""},(e,r)=>{if(e)console.log(e);});
+				p.reply(event,{color:0xffffff,description:"Pong : "+(recv)+"ms\nRound Trip : "+(new Date((r.id/4194304)+1420070400000).getTime()-new Date((event.id/4194304)+1420070400000).getTime())+"ms",title:""},(e,r)=>{
+					if(e)console.log(e);
+					console.log(now);
+					console.log(new Date((event.id/4194304)+1420070400000).getTime());
+					console.log(now-new Date((event.id/4194304)+1420070400000).getTime());
+				});
 			});
 		}
 	}
