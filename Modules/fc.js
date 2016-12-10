@@ -7,19 +7,22 @@ class EE extends EventEmitter{}
 const fc = new EE();
 fc.name="FightClub";
 
+var userStats = {};
 
 var config = {
 	maxHealth : 99,
 	dmgMin : 1,
 	dmgMax : 10,
-	healthBarCount : 10
+	healthBarCount : 15
 }
 
 var fights = {};
 fc.on("load",(p,data)=>{
+	if(data.stats)userStats=data.stats;
 	console.log("FightClub loaded!");
 });
 fc.on("unload",(p,data)=>{
+	data.stats=userStats;
 	console.log("FightClub unloaded!");
 });
 
@@ -51,17 +54,19 @@ var finishedTEMPLATES = [
 
 var bar = "█"; // Have 10 of these boys
 
+
+
 //Fight should tick once every 2 seconds.
 function tickFight(channel){
 	var fight = fights[channel];
 	var resp = template;
 	
 	var user1 = fight[2][0].username.toUpperCase();
-	resp = resp.replace(/{user1}/g,utils.pad(user1,20));
+	if(!userStats[fight[2][0].id])userStats[fight[2][0].id]=[0,0];
 	
 	if(fight[2][1]!=-1)var user2 = fight[2][1].username.toUpperCase();	
 	else var user2 = "OPPONENT";
-	resp = resp.replace(/{user2}/g,utils.pad(user2,20," ",true));
+	if(!userStats[fight[2][1].id])userStats[fight[2][1].id]=[0,0];
 	
 	if(fight[4]==-1){
 		fight[4]=Math.round(Math.random());
@@ -92,7 +97,12 @@ function tickFight(channel){
 	if(!(fight[0][0]>0&&fight[0][1]>0)){
 		var finished = finishedTEMPLATES[Math.round(Math.random()*(finishedTEMPLATES.length-1))];
 		fight[5].push([fight[4],finished,-1]);
+		userStats[fight[2][fight[4]?0:1].id][0]++;
+		userStats[fight[2][fight[4]?1:0].id][1]++;
 	}
+	
+	resp = resp.replace(/{user1}/g,utils.pad(user1+"("+userStats[fight[2][0].id][0]+"W/"+userStats[fight[2][0].id][1]+"L)",25));
+	resp = resp.replace(/{user2}/g,utils.pad("("+userStats[fight[2][1].id][0]+"W/"+userStats[fight[2][1].id][1]+"L)"+user2,25," ",true));
 	
 	fight[4] = fight[4]?0:1;	
 	
