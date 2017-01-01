@@ -54,8 +54,9 @@ timer.on("tick",(utils)=>{
 			var timer = timers[channel][timerId];
 			next = new Date(timer[2]).getTime();
 			if(next-now<=0){
+				timer[1] = parseInt(timer[1]);
 				timer[2]=strtotime(timer[1]+" seconds");
-				utils.sendTo(timer[0],timer[3]);
+				//utils.sendTo(timer[0],timer[3]);
 				timers[channel][timerId]=timer;
 			}
 		}
