@@ -56,7 +56,7 @@ timer.on("tick",(utils)=>{
 			if(next-now<=0){
 				timer[1] = parseInt(timer[1]);
 				timer[2]=strtotime(timer[1]+" seconds");
-				//utils.sendTo(timer[0],timer[3]);
+				utils.sendTo(timer[0],timer[3]);
 				timers[channel][timerId]=timer;
 			}
 		}
@@ -68,7 +68,7 @@ timer.commands = {
 		aliases: ["reminder"],
 		allowed: (p,user,args,event,helpReq) => {
 			return true;
-		}, 
+		},
 		parse: utils.combinator.seq(utils.combinate.phrase.or(utils.combinator.of("")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.all.or(utils.combinator.of(""))),
 		usage: "remind <time> <text>",
 		desc: "Use this command to set up reminders",
@@ -96,7 +96,7 @@ timer.commands = {
 		aliases: [],
 		allowed: (p,user,args,event,helpReq) => {
 			return p.hasPerm(event,user,"MANAGE_MESSAGES");
-		}, 
+		},
 		parse: utils.combinator.seq(utils.combinate.phrase.or(utils.combinator.of("help")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of("")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of("")),utils.combinate.space.or(utils.combinator.of("")),utils.combinate.phrase.or(utils.combinator.of(""))),
 		usage: "timer help",
 		desc: "Use this command to set up timers",
