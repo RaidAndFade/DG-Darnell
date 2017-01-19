@@ -564,7 +564,7 @@ base.commands={
 		desc: "Set the bot's status",
 		run: (p,args,user,channel,event) => {
 			var now = Date.now();
-			var recv = now-(new Date((event.id/4194304)+1420070400000).getTime())-13500;
+			var recv = now-utils.snowflakeToTime(event.id);
 			p.reply(event,"Checking ping",(e,r)=>{
 				p.reply(event,{color:0xffffff,description:"Pong : "+(recv)+"ms\nRound Trip : "+(new Date((r.id/4194304)+1420070400000).getTime()-new Date((event.id/4194304)+1420070400000).getTime())+"ms",title:""},(e,r)=>{
 					if(e)console.log(e);

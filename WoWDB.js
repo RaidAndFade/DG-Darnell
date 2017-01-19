@@ -18,6 +18,7 @@ const request = require('request');
 const querystring = require('querystring');
 const fp = require('path');
 const reload = require('require-reload')(require);
+const bignum = require('bignum');
 
 const spamPrevent = 2;//Seconds before a command. Less than this and the previous response is edited.
 const timeoutForCommand = 0.5;//Seconds between commands. Less than this and command is ignored.
@@ -73,7 +74,7 @@ function reloadModule(file){
 			Modules[file]=reload("./Modules/"+file);
 			if(data.persistent.modData[file])
 				Modules[file].emit("load",utils,data.persistent.modData[file]);
-			else 
+			else
 				Modules[file].emit("load",utils,{});
 			Modules[file].utils=utils;
 			pad2 = new Array(40-file.length).join(" ");
@@ -94,11 +95,11 @@ function loadModule(file){
 		Modules[file]=require("./Modules/"+file);
 		if(data.persistent.modData[file])
 			Modules[file].emit("load",utils,data.persistent.modData[file]);
-		else 
+		else
 			Modules[file].emit("load",utils,{});
-		
+
 		try{Modules[file].utils=utils;}catch(e){console.log("Failed to load the previous module, check the error");return;}
-		
+
 		pad2 = new Array(42-Modules[file].name.length).join(" ");
 		console.log("= LOADED "+Modules[file].name+pad2+"=");
 	}catch(e){console.log(e);}
@@ -126,6 +127,7 @@ utils={
 	owner: 			owner,
 	keys:			require("./UserPass.js").keys,
 	ownId: 			"",
+	botPing:		0,
 	combinate:		{
 		letter 		: combinate.regexp(/[a-z]/i),
 		letters 	: combinate.regexp(/[a-z]+/i),
@@ -296,18 +298,19 @@ utils={
 	editReply:  (event,msg,del=[true,30000],callback=(e,d)=>{},attachments=[])=>{
 		if(typeof del == "function"){callback = del;del=[true,30000];}
 		var embed = {}
+		var nmsg = ""
 		if(Array.isArray(msg)){
 			console.log("Has message & embed");
-			msg = msg[0];
-			msg = msg.substr(0,2000);
+			nmsg = msg[0];
+			nmsg = (""+nmsg).substr(0,2000);
 			embed = msg[1];
 		}else if((typeof msg == "object")&&!Array.isArray(msg)){
 			console.log("Msg IS embed");
 			embed = msg;
-			msg = "";
+			nmsg = "";
 		}else{
 			console.log("Normal Message");
-			msg = msg.substr(0,2000);
+			nmsg = (""+msg).substr(0,2000);
 		}
 		for(repk in data.commandReplies){
 			rep = data.commandReplies[repk];
@@ -318,7 +321,7 @@ utils={
 		bot.editMessage({
 			channelID: chan,
 			messageID: edit,
-			message: msg,
+			message: nmsg,
 			embed: embed,
 			attachments: attachments
 		},(e,d)=>{
@@ -378,13 +381,16 @@ utils={
 		if(typeof msg == "Object"&&!Array.isArray(msg)){
 			embed = msg.embed;
 		}
-		
-		msg = msg.substr(0,2000); 
+
+		msg = msg.substr(0,2000);
 		bot.sendMessage({
 			to: owner,
 			message: msg,
 			embed: embed
 		});
+	},
+	snowflakeToTime: (snowflake)=>{
+		return bignum(snowflake).shiftRight("22").add("1420070400000").toNumber();
 	}
 }
 utils.chanDataDesc=	{comInit:["The text before a command. Set to empty if you want to call it using user tag.",utils.combinate.phrase],enabled:["Whether the bot is enabled in this channel or not",utils.combinate.bool],autoDelete:["Should the bot auto-delete commands and responses after 30 seconds?",utils.combinate.bool]};
@@ -629,7 +635,13 @@ bot.on('ccreate', function(channel){
 		}
 	}
 });
+var lastHeartbeat = -1;
 bot.on('any', function(event){
+	//console.log(event);
+	if(event.op === 11){
+		console.log("ping :"+Date.now()+" - "+lastHeartbeat+" = "+(Date.now() - lastHeartbeat));
+		utils.botPing = Date.now() - lastHeartbeat;
+	}
 	try{
 		for(modf in Modules){
 			Modules[modf].emit("raw_event",utils,event);
@@ -637,6 +649,9 @@ bot.on('any', function(event){
 		}
 	}catch(e){console.log(e);}
 });
+bot.on('heartbeat', function(){
+	lastHeartbeat = Date.now();
+})
 /**************** TICKING THINGS *****************/
 function tick(){
 	setTimeout(tick,1000)
@@ -678,7 +693,7 @@ function start(){
 		in_.question(">", function(str) {
 			consoleCommandHandle(str);
 			return prompt(); // Too lazy to learn async
-		});	
+		});
 	};
 	load(function(){loadModules();bot.connect();});
 }
@@ -776,4 +791,3 @@ function requireUncached(module){
     return require(module)
 }
 start();
-
