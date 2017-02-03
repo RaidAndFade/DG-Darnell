@@ -255,22 +255,18 @@ utils={
 		var nmsg = "";
 		var embed = {}
 		if(Array.isArray(msg)){
-			console.log("Has message & embed");
 			nmsg = msg[0];
 			nmsg = nmsg.substr(0,2000);
 			embed = msg[1];
 		}else if((typeof msg == "object")&&!Array.isArray(msg)){
-			console.log("Msg IS embed");
 			embed = msg;
 			nmsg = "";
 		}else{
-			console.log("Normal Message");
 			nmsg = msg.substr(0,2000);
 		}
 		edit=false;
 		for(repk in data.commandReplies){
 			rep = data.commandReplies[repk];
-			console.log(repk+" E= "+rep+" E= "+event.id);
 			if(repk==event.id){edit=rep;break;}
 		}
 		if(edit&&shouldEdit){
@@ -300,21 +296,17 @@ utils={
 		var embed = {}
 		var nmsg = ""
 		if(Array.isArray(msg)){
-			console.log("Has message & embed");
 			nmsg = msg[0];
 			nmsg = (""+nmsg).substr(0,2000);
 			embed = msg[1];
 		}else if((typeof msg == "object")&&!Array.isArray(msg)){
-			console.log("Msg IS embed");
 			embed = msg;
 			nmsg = "";
 		}else{
-			console.log("Normal Message");
 			nmsg = (""+msg).substr(0,2000);
 		}
 		for(repk in data.commandReplies){
 			rep = data.commandReplies[repk];
-			console.log(repk+" E= "+rep+" E= "+event.id);
 			if(repk==event.id){edit=rep;break;}
 		}
 		chan=event.channel_id;
@@ -445,10 +437,6 @@ bot.on('message', function(unusable, unusable2, channelId, message, rawEvent) {
 	if((init!=""&&message.startsWith(init))||message.startsWith("<@"+utils.ownId+">")||message.startsWith("<@!"+utils.ownId+">")){
 		var isAbove = (typeof utils.bot.servers[rawEvent.d.guild_id]=="undefined")?user.id == utils.owner:(user.id==utils.bot.servers[rawEvent.d.guild_id].owner_id || user.id == utils.owner);
 		if(Object.keys(lastCommand).indexOf(user.id)>-1){
-			console.log(new Date().getTime());
-			console.log(lastCommand[user.id].time);
-			console.log(new Date().getTime()-lastCommand[user.id].time);
-			console.log(lastCommand[user.id]);
 			if(new Date().getTime()-lastCommand[user.id].time<spamPrevent*1000){
 				data.commandReplies[rawEvent.d.id]=lastCommand[user.id].id;
 			}
@@ -476,11 +464,9 @@ bot.on('message', function(unusable, unusable2, channelId, message, rawEvent) {
 					alias=coms[comk].aliases[aliask];
 					if(!run){if(comd==alias)run=true;}else break;
 				}
-				console.log(run+" : "+comd+"/"+comk);
 				if(run){
 					if("allowed" in coms[comk]){
 						canrun = coms[comk].allowed(utils,user,args,rawEvent.d,false);
-						console.log(comk+" : "+canrun);
 						if(canrun==false){
 							utils.reply(rawEvent.d,"You don't have permission to use that command!");
 							return;
@@ -512,7 +498,6 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 		if(utils.chanData[channelId].ModBlacklist.indexOf(modf)!=-1)continue;
 		try{Modules[modf].emit("message_updated",utils,messageId,user,channelId,message,rawEvent);}catch(e){}
 	}
-	console.log(message);
 	if(rawEvent.id in data.ownMsgs){return;}
 	if(!message)return;
 	if(rawEvent.cancelled)return;
@@ -520,10 +505,6 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 	init=utils.chanData[channelId].settings.comInit;
 	if((init!=""&&message.startsWith(init))||message.startsWith("<@"+utils.ownId+">")||message.startsWith("<@!"+utils.ownId+">")){
 		if(Object.keys(lastCommand).indexOf(user.id)>-1){
-			console.log(new Date().getTime());
-			console.log(lastCommand[user.id].time);
-			console.log(new Date().getTime()-lastCommand[user.id].time);
-			console.log(lastCommand[user.id]);
 			if(new Date().getTime()-lastCommand[user.id].time<spamPrevent*1000){
 				data.commandReplies[rawEvent.d.id]=lastCommand[user.id].id;
 			}
@@ -552,7 +533,6 @@ bot.on('messageUpdate', function(nothing,rawEvent){
 					alias=coms[comk].aliases[aliask];
 					if(!run){if(comd===alias)run=true;}else break;
 				}
-				console.log(run+" : "+comd+"/"+comk);
 				if(run==true){
 					if(coms[comk].parse){
 						if(coms[comk].parse.parse(args.join(" ")).status==false){console.log([args,args.join(" "),coms[comk].parse.parse(args.join(" "))]);return;}
@@ -588,7 +568,6 @@ bot.on('messageDelete', function(rawEvent){
 	try{
 	for(var key in utils.chanData.def){
 		if(!(key in utils.chanData[channelId])){
-			console.log(key);
 			utils.chanData[channelId][key]=utils.chanData.def[key];
 		}
 	}
@@ -746,7 +725,6 @@ function save(){
 	saveArr = data.persistent;
 	var saveData = JSON.stringify(saveArr);
 	fs.writeFileSync( "./data.json", saveData, "utf8");
-	console.log(saveData);
 }
 function consoleCommandHandle(cmd){
 	cmd = cmd.toLowerCase();
