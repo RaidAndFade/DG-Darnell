@@ -203,6 +203,7 @@ utils={
 	},
 	sendMSG:	(event,msg,del=[true,30000,false],callback=(e,d)=>{},attachments=[])=>{
 		if(typeof del == "function"){callback = del;del=[true,30000,false];}
+		var nmsg = "";
 		var embed = {}
 		if(Array.isArray(msg)){
 			nmsg = msg[0];
@@ -229,6 +230,7 @@ utils={
 	},
 	sendTo:	(to,msg,del=[true,30000,false],callback=(e,d)=>{},attachments=[])=>{
 		if(typeof del == "function"){callback = del;del=[true,30000,false];}
+		var nmsg = "";
 		var embed = {}
 		if(Array.isArray(msg)){
 			nmsg = msg[0];
