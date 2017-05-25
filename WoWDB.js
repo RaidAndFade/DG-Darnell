@@ -205,16 +205,18 @@ utils={
 		if(typeof del == "function"){callback = del;del=[true,30000,false];}
 		var embed = {}
 		if(Array.isArray(msg)){
-			msg = msg[0];
+			nmsg = msg[0];
+			nmsg = nmsg.substr(0,2000);
 			embed = msg[1];
+		}else if((typeof msg == "object")&&!Array.isArray(msg)){
+			embed = msg;
+			nmsg = "";
+		}else{
+			nmsg = msg.substr(0,2000);
 		}
-		if(typeof msg == "Object"&&!Array.isArray(msg)){
-			embed = msg.embed;
-		}
-		msg = msg.substr(0,2000);
 		bot.sendMessage({
 			to: event.channel_id,
-			message: msg,
+			message: nmsg,
 			embed: embed,
 			attachments: attachments
 		},function(e,d){
@@ -229,16 +231,18 @@ utils={
 		if(typeof del == "function"){callback = del;del=[true,30000,false];}
 		var embed = {}
 		if(Array.isArray(msg)){
-			msg = msg[0];
+			nmsg = msg[0];
+			nmsg = nmsg.substr(0,2000);
 			embed = msg[1];
+		}else if((typeof msg == "object")&&!Array.isArray(msg)){
+			embed = msg;
+			nmsg = "";
+		}else{
+			nmsg = msg.substr(0,2000);
 		}
-		if(typeof msg == "Object"&&!Array.isArray(msg)){
-			embed = msg.embed;
-		}
-		msg = msg.substr(0,2000);
 		bot.sendMessage({
 			to: to,
-			message: msg,
+			message: nmsg,
 			embed: embed,
 			attachments: attachments
 		},function(e,d){
